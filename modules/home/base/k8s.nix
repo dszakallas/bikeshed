@@ -19,7 +19,6 @@ in
   };
   config = mkIf config.davids.k8stools.enable {
     home.packages = with pkgs; [
-      fluxcd
       k9s
       kind
       kubecolor
