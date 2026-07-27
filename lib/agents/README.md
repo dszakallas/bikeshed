@@ -70,6 +70,43 @@ configuration wrapped in the target agent's expected top-level key:
 
 ---
 
+## Merging Into Config Files (`davids.agents.<agent>.mcp`)
+
+The `homeModules.agents` module writes the agent-shaped output of `mcpServersForAgent` into each
+agent's own config file (e.g. `~/.claude/.claude.json`, `~/.gemini/settings.json`). Because the
+agent CLI also writes to that file, the module can't symlink it from the Nix store; instead an
+activation step merges the managed servers in with `jq`.
+
+Set `davids.agents.<agent>.mcp.servers` to the wrapped output of `mcpServersForAgent`, and pick how
+it combines with whatever is already in the file via `davids.agents.<agent>.mcp.strategy`:
+
+| Strategy | Behavior |
+| --------------- | -------- |
+| `"replace"` | Overwrites the managed top-level key (e.g. `mcpServers`) wholesale, keeping any sibling top-level keys. Equivalent to `jq -s '.[0] + .[1]'`. |
+| `"merge"` (default) | Additionally merges one level deeper: individual servers are added or replaced, while servers the module doesn't manage are left untouched. |
+
+The activation only runs when `mcp.target` is non-null **and** `mcp.servers` is non-empty, so config
+files for agents you don't manage are never created or touched.
+
+### Example
+
+Given an existing `~/.claude/.claude.json` and a managed set that redefines `glean` and adds
+`atlassian`:
+
+```jsonc
+// existing (on disk, partly written by the CLI)
+{ "otherKey": {}, "mcpServers": { "cliAdded": {...}, "glean": { "command": "OLD", "stale": true } } }
+// managed (from mcpServersForAgent)
+{ "mcpServers": { "glean": { "command": "NEW" }, "atlassian": {...} } }
+```
+
+- `"merge"` → `cliAdded` kept, `glean` replaced wholesale (dropping `stale`), `atlassian` added,
+  `otherKey` kept.
+- `"replace"` → the whole `mcpServers` object becomes `{ glean, atlassian }` (`cliAdded` lost);
+  `otherKey` kept.
+
+---
+
 ## Other Agents Library Exports
 
 - `agents.memory`: Provides standard agent prompt fragments (`avoidTropes`, `disableAttributions`).

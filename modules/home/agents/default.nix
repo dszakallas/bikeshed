@@ -132,7 +132,20 @@ let
           description = "Modular rule files for ${name}.";
         };
         mcp = {
-          enable = mkEnableOption "user-level MCP servers for ${name}";
+          strategy = mkOption {
+            type = types.enum [
+              "replace"
+              "merge"
+            ];
+            default = "merge";
+            description = ''
+              How ${name} MCP servers are combined with the existing config file:
+              "replace" overwrites the managed top-level keys (e.g. mcpServers)
+              wholesale, keeping sibling keys; "merge" additionally merges one level
+              deeper, so individual servers are added or replaced while servers we
+              don't manage are left untouched.
+            '';
+          };
           target = mkOption {
             type = types.nullOr types.str;
             default = defaultMcpTarget;
@@ -177,18 +190,29 @@ let
           })
           # User-level MCP servers are merged into the agent's own config file
           # (which the agent itself also writes to), so we can't symlink it from
-          # the store. Instead replace the managed top-level key while preserving
-          # siblings, mirroring the devenv `jq -s '.[0] + .[1]'` merge.
-          (mkIf (cfg.mcp.enable && cfg.mcp.target != null) (
+          # the store. The `merge` strategy shallow-merges the top level and then
+          # one level deeper, so servers a CLI added at user scope survive;
+          # `replace` overwrites the managed top-level keys wholesale, mirroring
+          # the devenv `jq -s '.[0] + .[1]'` merge. Gating on a non-empty servers
+          # set keeps us from touching config files for agents we don't manage.
+          (mkIf (cfg.mcp.target != null && cfg.mcp.servers != { }) (
             let
               managed = pkgs.writeText "${name}-mcp.json" (builtins.toJSON cfg.mcp.servers);
+              # `replace`: managed top-level keys win, siblings kept.
+              # `merge`: additionally merge object-valued keys one level deeper so
+              # individual servers are added/replaced and unmanaged ones remain.
+              jqFilter =
+                if cfg.mcp.strategy == "merge" then
+                  ''.[0] as $e | .[1] as $m | $e + $m + ([$m | keys[] | select(($e[.] | type) == "object" and ($m[.] | type) == "object") | {key: ., value: ($e[.] + $m[.])}] | from_entries)''
+                else
+                  ".[0] + .[1]";
               mergeScript = pkgs.writeShellScript "${name}-mcp-merge" ''
                 set -eu
                 target="$1"
                 managed="$2"
                 mkdir -p "$(dirname "$target")"
                 [ -e "$target" ] || echo '{}' > "$target"
-                ${pkgs.jq}/bin/jq -s '.[0] + .[1]' "$target" "$managed" > "$target.tmp"
+                ${pkgs.jq}/bin/jq -s ${lib.escapeShellArg jqFilter} "$target" "$managed" > "$target.tmp"
                 mv "$target.tmp" "$target"
                 chmod 600 "$target"
               '';
