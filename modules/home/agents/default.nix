@@ -262,6 +262,7 @@ let
     defaultMemoryDirectory = ".gemini";
     defaultMemoryFile = "GEMINI.md";
     defaultLinkSkills = true;
+    defaultMcpTarget = ".gemini/antigravity-cli/mcp_config.json";
   };
 
   opencodeModule = mkAgentModule {

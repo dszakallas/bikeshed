@@ -82,10 +82,11 @@ it combines with whatever is already in the file via `davids.agents.<agent>.mcp.
 
 | Strategy | Behavior |
 | --------------- | -------- |
-| `"replace"` | Overwrites the managed top-level key (e.g. `mcpServers`) wholesale, keeping any sibling top-level keys. Equivalent to `jq -s '.[0] + .[1]'`. |
-| `"merge"` (default) | Additionally merges one level deeper: individual servers are added or replaced, while servers the module doesn't manage are left untouched. |
+| `"replace"` | Overwrites managed top-level keys (e.g. `mcpServers`) wholesale. Sibling keys remain. |
+| `"merge"` (default) | Deep merges one level: individual servers are updated/added; unmanaged ones remain. |
 
 The activation only runs when `mcp.target` is non-null **and** `mcp.servers` is non-empty, so config
+
 files for agents you don't manage are never created or touched.
 
 ### Example
