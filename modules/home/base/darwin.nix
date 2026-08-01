@@ -54,6 +54,8 @@ in
 
   config.programs.zsh.envExtra = mkIf brew.enable ''
     export HOMEBREW_PREFIX="${brew.prefix}"
+    export HOMEBREW_NO_ENV_HINTS="1"
+    export HOMEBREW_AUTO_UPDATE_SECS="604800"
     export PATH="${brew.prefix}/bin:$PATH"
     export PATH="${brew.prefix}/opt/gnu-getopt/bin:$PATH"
   '';
@@ -68,6 +70,8 @@ in
 
   config.programs.bash.profileExtra = mkIf brew.enable ''
     export HOMEBREW_PREFIX="${brew.prefix}"
+    export HOMEBREW_NO_ENV_HINTS="1"
+    export HOMEBREW_AUTO_UPDATE_SECS="604800"
     export PATH="${brew.prefix}/bin:$PATH"
     export PATH="${brew.prefix}/opt/gnu-getopt/bin:$PATH"
   '';
