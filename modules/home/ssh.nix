@@ -106,8 +106,8 @@ in
             ServerAliveInterval = 0;
             ServerAliveCountMax = 3;
             HashKnownHosts = false;
-            # default ~/.ssh/known_hosts is unmanaged. ~/.ssh/bikeshed.known_hosts is managed by this module
-            UserKnownHostsFile = "~/.ssh/known_hosts ~/.ssh/bikeshed.known_hosts";
+            # default ~/.ssh/known_hosts is unmanaged. ~/.ssh/davids.known_hosts is managed by this module
+            UserKnownHostsFile = "~/.ssh/known_hosts ~/.ssh/davids.known_hosts";
             ControlMaster = "no";
             ControlPath = "~/.ssh/master-%r@%n:%p";
             ControlPersist = "no";

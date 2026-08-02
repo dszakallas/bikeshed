@@ -282,7 +282,7 @@ in
           g = "git";
         })
       ];
-      file.".ssh/bikeshed.known_hosts" = mkIf config.bikeshed.ssh.enable {
+      file.".ssh/davids.known_hosts" = mkIf config.bikeshed.ssh.enable {
         text = config.bikeshed.ssh.knownHostsLines;
       };
     };
