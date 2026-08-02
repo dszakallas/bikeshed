@@ -13,11 +13,11 @@ let
     mkOption
     types
     ;
-  brew = config.davids.brew;
+  brew = config.bikeshed.brew;
 in
 {
   options = {
-    davids.brew = {
+    bikeshed.brew = {
       enable = mkEnableOption "Homebrew integration";
       prefix = mkOption {
         type = types.str;

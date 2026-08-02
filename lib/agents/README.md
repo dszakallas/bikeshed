@@ -70,15 +70,15 @@ configuration wrapped in the target agent's expected top-level key:
 
 ---
 
-## Merging Into Config Files (`davids.agents.<agent>.mcp`)
+## Merging Into Config Files (`bikeshed.agents.<agent>.mcp`)
 
 The `homeModules.agents` module writes the agent-shaped output of `mcpServersForAgent` into each
 agent's own config file (e.g. `~/.claude/.claude.json`, `~/.gemini/settings.json`). Because the
 agent CLI also writes to that file, the module can't symlink it from the Nix store; instead an
 activation step merges the managed servers in with `jq`.
 
-Set `davids.agents.<agent>.mcp.servers` to the wrapped output of `mcpServersForAgent`, and pick how
-it combines with whatever is already in the file via `davids.agents.<agent>.mcp.strategy`:
+Set `bikeshed.agents.<agent>.mcp.servers` to the wrapped output of `mcpServersForAgent`, and pick how
+it combines with whatever is already in the file via `bikeshed.agents.<agent>.mcp.strategy`:
 
 | Strategy | Behavior |
 | --------------- | -------- |

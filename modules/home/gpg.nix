@@ -22,8 +22,8 @@ in
         ;
     in
     {
-      davids.gpg.enable = mkEnableOption "GPG goodies";
-      davids.gpg.defaultKey = mkOption {
+      bikeshed.gpg.enable = mkEnableOption "GPG goodies";
+      bikeshed.gpg.defaultKey = mkOption {
         type = str;
         description = "Default GPG key to use";
         default = "";
@@ -32,7 +32,7 @@ in
   config = {
     home = {
       packages = [ pkgs.gnupg ];
-      file.".gnupg/gpg-agent.conf" = mkIf config.davids.gpg.enable {
+      file.".gnupg/gpg-agent.conf" = mkIf config.bikeshed.gpg.enable {
         text = ctx.lib.textRegion {
           name = moduleName;
           content = ''
@@ -42,7 +42,7 @@ in
           '';
         };
       };
-      file.".gnupg/gpg.conf" = mkIf config.davids.gpg.enable {
+      file.".gnupg/gpg.conf" = mkIf config.bikeshed.gpg.enable {
         text = ctx.lib.textRegion {
           name = moduleName;
           content = ''
@@ -53,9 +53,9 @@ in
             default-preference-list SHA512 SHA384 SHA256 SHA224 AES256 AES192 AES CAST5 ZLIB BZIP2 ZIP Uncompressed
           ''
           + (
-            if (config.davids.gpg.defaultKey != "") then
+            if (config.bikeshed.gpg.defaultKey != "") then
               ''
-                default-key ${config.davids.gpg.defaultKey};
+                default-key ${config.bikeshed.gpg.defaultKey};
               ''
             else
               ""

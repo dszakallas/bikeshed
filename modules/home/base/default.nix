@@ -83,7 +83,7 @@ in
         ;
     in
     {
-      davids.git = {
+      bikeshed.git = {
         enable = mkEnableOption "Git goodies";
         excludesLines = mkOption {
           type = lines;
@@ -164,13 +164,13 @@ in
       };
     };
   config = {
-    davids.git.excludesLines = mkIf config.davids.git.enable (
+    bikeshed.git.excludesLines = mkIf config.bikeshed.git.enable (
       ctx.lib.textRegion {
         name = moduleName;
         content = builtins.readFile ./gitignore;
       }
     );
-    davids.git.configLines = mkIf config.davids.git.enable (
+    bikeshed.git.configLines = mkIf config.bikeshed.git.enable (
       let
         authConfig =
           let
@@ -202,7 +202,7 @@ in
               in
               sshBlock + credBlock;
           in
-          builtins.concatStringsSep "" (map genRule config.davids.git.authentication.rules);
+          builtins.concatStringsSep "" (map genRule config.bikeshed.git.authentication.rules);
 
         includesConfig =
           let
@@ -219,7 +219,7 @@ in
                     path = ${toString inc.path}
                 '';
           in
-          builtins.concatStringsSep "" (map genInclude config.davids.git.includes);
+          builtins.concatStringsSep "" (map genInclude config.bikeshed.git.includes);
       in
       ctx.lib.textRegion {
         name = moduleName;
@@ -249,11 +249,11 @@ in
         dev
         nix
       ];
-      file.".gitconfig" = mkIf config.davids.git.enable {
-        text = config.davids.git.configLines;
+      file.".gitconfig" = mkIf config.bikeshed.git.enable {
+        text = config.bikeshed.git.configLines;
       };
-      file.".gitexcludes" = mkIf config.davids.git.enable {
-        text = config.davids.git.excludesLines;
+      file.".gitexcludes" = mkIf config.bikeshed.git.enable {
+        text = config.bikeshed.git.excludesLines;
       };
       file.".vimrc".text = ctx.lib.textRegion {
         name = moduleName;
@@ -278,12 +278,12 @@ in
           v = "vim";
           docker = "podman";
         }
-        (mkIf config.davids.git.enable {
+        (mkIf config.bikeshed.git.enable {
           g = "git";
         })
       ];
-      file.".ssh/davids.known_hosts" = mkIf config.davids.ssh.enable {
-        text = config.davids.ssh.knownHostsLines;
+      file.".ssh/bikeshed.known_hosts" = mkIf config.bikeshed.ssh.enable {
+        text = config.bikeshed.ssh.knownHostsLines;
       };
     };
     programs = {
@@ -346,7 +346,7 @@ in
           plugins = [
             "direnv"
           ]
-          ++ optionals config.davids.git.enable [ "git" ];
+          ++ optionals config.bikeshed.git.enable [ "git" ];
           theme = "fino-time";
         };
       };

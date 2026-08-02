@@ -1,12 +1,12 @@
 ---
-name: dotfiles-common
+name: bikeshed
 description: "How to use the common dotfiles repository, including home-manager and devenv agent module configurations, setting up MCP servers, and linking agent skills."
 tags: [nix, home-manager, devenv, agents, dotfiles]
 ---
 
-# dotfiles-common - AI Agent and System Configuration Library
+# bikeshed - AI Agent and System Configuration Library
 
-Use this skill when configuring or using modules from the `dotfiles-common` repository, particularly when setting up home-manager or devenv configuration for AI agents (such as Claude, Gemini, Copilot, or VSCode).
+Use this skill when configuring or using modules from the `bikeshed` repository, particularly when setting up home-manager or devenv configuration for AI agents (such as Claude, Gemini, Copilot, or VSCode).
 
 ## Core Features
 
@@ -19,46 +19,46 @@ Use this skill when configuring or using modules from the `dotfiles-common` repo
 
 ## Home-Manager Configuration
 
-To use the agents module in your home-manager configuration, import `davids-dotfiles-common.homeModules.agents`. This exposes options under the `davids.agents` namespace.
+To use the agents module in your home-manager configuration, import `bikeshed.homeModules.agents`. This exposes options under the `bikeshed.agents` namespace.
 
 ### Configuration Options
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `davids.agents.enable` | Boolean | Enables user-level AI agent configurations. |
-| `davids.agents.skills.enable` | Boolean | Enables linking custom skill sets. |
-| `davids.agents.skills.entries` | Attribute Set of Paths | Mapping of skill names to paths or derivations. |
-| `davids.agents.<agent>.enable` | Boolean | Enables config for `<agent>` (gemini, claude, copilot, antigravity, opencode). |
-| `davids.agents.<agent>.linkSkills` | Boolean | Whether to link compiled skills into the agent's directory. |
-| `davids.agents.<agent>.memory.enable` | Boolean | Enables user-level memory file management. |
-| `davids.agents.<agent>.memory.source` | Null or Path | Source file for the agent's main memory file (e.g. `GEMINI.md`, `CLAUDE.md`). |
-| `davids.agents.<agent>.mcp.enable` | Boolean | Enables merging user-level MCP servers. |
-| `davids.agents.<agent>.mcp.servers` | Attribute Set | MCP server definitions. |
+| `bikeshed.agents.enable` | Boolean | Enables user-level AI agent configurations. |
+| `bikeshed.agents.skills.enable` | Boolean | Enables linking custom skill sets. |
+| `bikeshed.agents.skills.entries` | Attribute Set of Paths | Mapping of skill names to paths or derivations. |
+| `bikeshed.agents.<agent>.enable` | Boolean | Enables config for `<agent>` (gemini, claude, copilot, antigravity, opencode). |
+| `bikeshed.agents.<agent>.linkSkills` | Boolean | Whether to link compiled skills into the agent's directory. |
+| `bikeshed.agents.<agent>.memory.enable` | Boolean | Enables user-level memory file management. |
+| `bikeshed.agents.<agent>.memory.source` | Null or Path | Source file for the agent's main memory file (e.g. `GEMINI.md`, `CLAUDE.md`). |
+| `bikeshed.agents.<agent>.mcp.enable` | Boolean | Enables merging user-level MCP servers. |
+| `bikeshed.agents.<agent>.mcp.servers` | Attribute Set | MCP server definitions. |
 
 ### Example Home-Manager Configuration
 
 ```nix
-{ pkgs, lib, config, davids-dotfiles-common, ... }:
+{ pkgs, lib, config, bikeshed, ... }:
 
 {
   imports = [
-    davids-dotfiles-common.homeModules.agents
+    bikeshed.homeModules.agents
   ];
 
-  davids.agents = {
+  bikeshed.agents = {
     enable = true;
     skills = {
       enable = true;
       entries = {
         # Local custom workspace skills
-        local-skills = davids-dotfiles-common.lib.agents.mkSkill pkgs {
+        local-skills = bikeshed.lib.agents.mkSkill pkgs {
           name = "local-skills";
           version = "1.0.0";
           src = ./skills;
         };
 
         # Remote skill set fetched from a GitHub repository
-        cc-skills-golang = davids-dotfiles-common.lib.agents.mkSkill pkgs {
+        cc-skills-golang = bikeshed.lib.agents.mkSkill pkgs {
           name = "cc-skills-golang";
           version = "2026-07-02";
           src = pkgs.fetchFromGitHub {
@@ -111,11 +111,11 @@ To manage project-level development environment configurations for AI agents, us
 
 ---
 
-## Setting up Devenv with `dotfiles-common`
+## Setting up Devenv with `bikeshed`
 
 ### 1. Define inputs in `devenv.yaml`
 
-Configure `davids-dotfiles-common` as an input in `devenv.yaml`:
+Configure `bikeshed` as an input in `devenv.yaml`:
 
 ```yaml
 inputs:
@@ -126,8 +126,8 @@ inputs:
     inputs:
       nixpkgs:
         follows: nixpkgs
-  davids-dotfiles-common:
-    url: github:dszakallas/dotfiles-common
+  bikeshed:
+    url: github:dszakallas/bikeshed
     inputs:
       nixpkgs:
         follows: nixpkgs
@@ -146,11 +146,11 @@ To prevent resource-heavy tasks (like pulling remote skills or configuring MCP s
   # Declare the resource-isolated "agents" profile
   profiles.agents.module = {
     imports = [
-      inputs.davids-dotfiles-common.devenvModules.agents
+      inputs.bikeshed.devenvModules.agents
     ];
 
     agents = let
-      commonLib = inputs.davids-dotfiles-common.lib;
+      commonLib = inputs.bikeshed.lib;
       
       # Define project-specific MCP servers
       mcpServers = {
@@ -171,11 +171,11 @@ To prevent resource-heavy tasks (like pulling remote skills or configuring MCP s
       skills = {
         enable = true;
         entries = {
-          # Package shared skills from dotfiles-common
+          # Package shared skills from bikeshed
           shared = commonLib.agents.mkSkill pkgs {
             name = "shared-skills";
             version = "unstable";
-            src = inputs.davids-dotfiles-common.outPath;
+            src = inputs.bikeshed.outPath;
             include = [ "devenv" ];
           };
         };
@@ -218,7 +218,7 @@ The `mkSkill` utility compiles one or more agent skills (either from local direc
 ### Function Signature
 
 ```nix
-davids-dotfiles-common.lib.agents.mkSkill pkgs {
+bikeshed.lib.agents.mkSkill pkgs {
   name = "skill-name";
   version = "1.0.0";
   src = ./path-to-source;
@@ -233,7 +233,7 @@ davids-dotfiles-common.lib.agents.mkSkill pkgs {
 - **`name`**: The package/derivation name.
 - **`version`**: The version identifier of the skill set.
 - **`src`**: The source directory or derivation containing the skills.
-  - **Local Path**: You can supply a local directory path (e.g. `./skills` or `inputs.davids-dotfiles-common.outPath`).
+  - **Local Path**: You can supply a local directory path (e.g. `./skills` or `inputs.bikeshed.outPath`).
   - **Remote Repository**: Since installing remote community skills is common, you can fetch skills directly from Git/GitHub using helpers like `pkgs.fetchFromGitHub` or `pkgs.fetchgit`.
 - **`include`**: An optional list of skill folder names to explicitly package. If `null`, all discovered skills are included.
 - **`exclude`**: An optional list of skill folder names to filter out of the derivation output.
@@ -248,16 +248,16 @@ davids-dotfiles-common.lib.agents.mkSkill pkgs {
 ### Usage Example: Mixing Local and Remote Skills
 
 ```nix
-davids.agents.skills.entries = {
+bikeshed.agents.skills.entries = {
   # Local custom workspace skills
-  local-project-skills = davids-dotfiles-common.lib.agents.mkSkill pkgs {
+  local-project-skills = bikeshed.lib.agents.mkSkill pkgs {
     name = "project-skills";
     version = "1.0.0";
     src = ./my-skills-dir;
   };
 
   # Remote Go-specific agent skills
-  cc-skills-golang = davids-dotfiles-common.lib.agents.mkSkill pkgs {
+  cc-skills-golang = bikeshed.lib.agents.mkSkill pkgs {
     name = "cc-skills-golang";
     version = "2026-07-02";
     src = pkgs.fetchFromGitHub {
@@ -279,7 +279,7 @@ Since different AI agents use slightly different schemas for declaring HTTP and 
 ### Function Signature
 
 ```nix
-davids-dotfiles-common.lib.agents.mcpServersForAgent agentName genericMcpServers
+bikeshed.lib.agents.mcpServersForAgent agentName genericMcpServers
 ```
 
 ### Server Type Conversions

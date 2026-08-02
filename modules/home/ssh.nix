@@ -39,14 +39,14 @@ in
         ;
     in
     {
-      davids.ssh.enable = mkEnableOption "SSH goodies";
-      davids.ssh.agent.enable = mkEnableOption "ssh-agent management";
-      davids.ssh.knownHostsLines = mkOption {
+      bikeshed.ssh.enable = mkEnableOption "SSH goodies";
+      bikeshed.ssh.agent.enable = mkEnableOption "ssh-agent management";
+      bikeshed.ssh.knownHostsLines = mkOption {
         description = "Managed known_host file lines";
         type = lines;
         default = "";
       };
-      davids.ssh.matchBlocks = mkOption {
+      bikeshed.ssh.matchBlocks = mkOption {
         type = attrsOf (submodule {
           freeformType = types.attrsOf types.anything;
           options = {
@@ -77,8 +77,8 @@ in
       # We can't use the standard /System/Library/LaunchAgents/com.openssh.ssh-agent.plist
       # because we need to customize the arguments to support FIDO2
       # SSH_AUTH_SOCK will always be allocated (unless someone turned off SIP and unloaded the system ssh-agent)
-      "com.openssh.ssh-agent" = mkIf (config.davids.ssh.enable) {
-        enable = config.davids.ssh.agent.enable;
+      "com.openssh.ssh-agent" = mkIf (config.bikeshed.ssh.enable) {
+        enable = config.bikeshed.ssh.agent.enable;
         config = {
           ProgramArguments = [
             "/bin/sh"
@@ -97,7 +97,7 @@ in
       };
     };
     programs = {
-      ssh = mkIf config.davids.ssh.enable (
+      ssh = mkIf config.bikeshed.ssh.enable (
         let
           wildcardHostConfig = {
             ForwardAgent = false;
@@ -106,8 +106,8 @@ in
             ServerAliveInterval = 0;
             ServerAliveCountMax = 3;
             HashKnownHosts = false;
-            # default ~/.ssh/known_hosts is unmanaged. ~/.ssh/davids.known_hosts is managed by this module
-            UserKnownHostsFile = "~/.ssh/known_hosts ~/.ssh/davids.known_hosts";
+            # default ~/.ssh/known_hosts is unmanaged. ~/.ssh/bikeshed.known_hosts is managed by this module
+            UserKnownHostsFile = "~/.ssh/known_hosts ~/.ssh/bikeshed.known_hosts";
             ControlMaster = "no";
             ControlPath = "~/.ssh/master-%r@%n:%p";
             ControlPersist = "no";
@@ -150,7 +150,7 @@ in
                 SecurityKeyProvider = "${standaloneFIDO2}";
               })
             ]
-          ) ({ "*" = { }; } // config.davids.ssh.matchBlocks);
+          ) ({ "*" = { }; } // config.bikeshed.ssh.matchBlocks);
         }
       );
     };

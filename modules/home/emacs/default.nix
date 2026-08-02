@@ -17,7 +17,7 @@ let
 in
 {
   options = {
-    davids.emacs = {
+    bikeshed.emacs = {
       enable = mkEnableOption "Emacs configuration";
       daemon = mkOption {
         default = { };
@@ -71,14 +71,14 @@ in
       };
     };
   };
-  config = mkIf config.davids.emacs.enable (
+  config = mkIf config.bikeshed.emacs.enable (
     let
-      pkg = config.davids.emacs.spacemacs.package;
+      pkg = config.bikeshed.emacs.spacemacs.package;
       spacemacs-start-directory =
-        if config.davids.emacs.spacemacs.type == "package" then
+        if config.bikeshed.emacs.spacemacs.type == "package" then
           "${pkg.out}/share/spacemacs"
         else
-          config.davids.emacs.spacemacs.local;
+          config.bikeshed.emacs.spacemacs.local;
       loadSpacemacsInit = f: ''
         (setq spacemacs-start-directory "${spacemacs-start-directory}/")
         (add-to-list 'load-path spacemacs-start-directory)
@@ -88,10 +88,10 @@ in
     in
     {
       launchd.agents."eu.szakallas.emacs" = mkIf pkgs.stdenv.hostPlatform.isDarwin {
-        enable = config.davids.emacs.daemon.enable;
+        enable = config.bikeshed.emacs.daemon.enable;
         config = {
           ProgramArguments = [
-            "${config.davids.emacs.package}/Applications/Emacs.app/Contents/MacOS/Emacs"
+            "${config.bikeshed.emacs.package}/Applications/Emacs.app/Contents/MacOS/Emacs"
             "--fg-daemon"
           ];
           KeepAlive = true;
@@ -101,7 +101,7 @@ in
       home.packages =
         with pkgs;
         [
-          config.davids.emacs.package
+          config.bikeshed.emacs.package
           # lsp dependencies
           nodejs_24
           # vterm build dependencies
@@ -109,17 +109,17 @@ in
           glibtool
         ]
         ++ (optionals
-          (config.davids.emacs.spacemacs.enable && config.davids.emacs.spacemacs.type == "package")
+          (config.bikeshed.emacs.spacemacs.enable && config.bikeshed.emacs.spacemacs.type == "package")
           [
-            config.davids.emacs.spacemacs.package
+            config.bikeshed.emacs.spacemacs.package
           ]
         );
 
-      davids.git.excludesLines = ctx.lib.textRegion {
+      bikeshed.git.excludesLines = ctx.lib.textRegion {
         name = moduleName;
         content = builtins.readFile ./gitignore;
       };
-      davids.git.configLines = ctx.lib.textRegion {
+      bikeshed.git.configLines = ctx.lib.textRegion {
         name = moduleName;
         content = ''
           [magithub]
@@ -133,36 +133,36 @@ in
       home.file.".davids/bin/ect" = {
         text = ''
           #!/bin/sh
-          exec ${config.davids.emacs.package}/bin/emacsclient --tty "$@"
+          exec ${config.bikeshed.emacs.package}/bin/emacsclient --tty "$@"
         '';
         executable = true;
       };
       home.file.".davids/bin/ecw" = {
         text = ''
           #!/bin/sh
-          exec ${config.davids.emacs.package}/bin/emacsclient --reuse-frame -a "" "$@"
+          exec ${config.bikeshed.emacs.package}/bin/emacsclient --reuse-frame -a "" "$@"
         '';
         executable = true;
       };
       home.file.".davids/bin/ec" = {
         text = ''
           #!/bin/sh
-          exec ${config.davids.emacs.package}/bin/emacsclient "$@"
+          exec ${config.bikeshed.emacs.package}/bin/emacsclient "$@"
         '';
         executable = true;
       };
       home.file.".spacemacs.d" =
-        mkIf (config.davids.emacs.spacemacs.enable && config.davids.emacs.spacemacs.config.enable)
+        mkIf (config.bikeshed.emacs.spacemacs.enable && config.bikeshed.emacs.spacemacs.config.enable)
           {
-            source = config.davids.emacs.spacemacs.config.path;
+            source = config.bikeshed.emacs.spacemacs.config.path;
           };
-      home.file.".emacs.d/init.el" = mkIf config.davids.emacs.spacemacs.enable {
+      home.file.".emacs.d/init.el" = mkIf config.bikeshed.emacs.spacemacs.enable {
         text = loadSpacemacsInit "init";
       };
-      home.file.".emacs.d/early-init.el" = mkIf config.davids.emacs.spacemacs.enable {
+      home.file.".emacs.d/early-init.el" = mkIf config.bikeshed.emacs.spacemacs.enable {
         text = loadSpacemacsInit "early-init";
       };
-      home.file.".emacs.d/dump-init.el" = mkIf config.davids.emacs.spacemacs.enable {
+      home.file.".emacs.d/dump-init.el" = mkIf config.bikeshed.emacs.spacemacs.enable {
         text = loadSpacemacsInit "dump-init";
       };
       programs.zsh = {

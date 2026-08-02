@@ -13,11 +13,11 @@ let
 in
 {
   options = {
-    davids.k8stools = {
+    bikeshed.k8stools = {
       enable = mkEnableOption "Kubernetes tools";
     };
   };
-  config = mkIf config.davids.k8stools.enable {
+  config = mkIf config.bikeshed.k8stools.enable {
     home.packages = with pkgs; [
       k9s
       kind

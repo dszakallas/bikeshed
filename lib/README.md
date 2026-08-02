@@ -1,4 +1,4 @@
-# dotfiles-common/lib
+# bikeshed/lib
 
 This directory contains reusable Nix library functions used throughout the dotfiles.
 

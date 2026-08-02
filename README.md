@@ -1,4 +1,4 @@
-# dotfiles-common
+# bikeshed
 
 Common dotfile configuration for most of my machines.
 

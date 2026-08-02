@@ -14,14 +14,14 @@ let
 in
 {
   options = {
-    davids.github = {
+    bikeshed.github = {
       enable = mkEnableOption "GitHub configuration";
       ssh = {
         enable = mkEnableOption "Enable GitHub SSH configuration";
       };
     };
   };
-  config = mkIf config.davids.github.enable {
+  config = mkIf config.bikeshed.github.enable {
     home.packages = with pkgs; [ gh ];
     programs.zsh = {
       oh-my-zsh.plugins = [ "gh" ];
@@ -29,7 +29,7 @@ in
     home.sessionVariables = {
       GH_PAGER = "cat";
     };
-    davids.ssh.knownHostsLines = mkIf config.davids.github.ssh.enable (
+    bikeshed.ssh.knownHostsLines = mkIf config.bikeshed.github.ssh.enable (
       ctx.lib.textRegion {
         name = moduleName;
         content = ''

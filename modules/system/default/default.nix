@@ -18,7 +18,7 @@ let
 in
 {
   options = {
-    davids.nix = {
+    bikeshed.nix = {
       enable = mkEnableOption "nix configuration";
       pinnedFlakes = mkOption {
         type = types.attrs;
@@ -42,7 +42,7 @@ in
     # The platform the configuration will be used on.
     nixpkgs.hostPlatform = system;
 
-    nix = mkIf config.davids.nix.enable {
+    nix = mkIf config.bikeshed.nix.enable {
       settings = nixConfig;
 
       registry = mapAttrs (name: value: {
@@ -52,9 +52,9 @@ in
           type = "indirect";
         };
         flake = value;
-      }) config.davids.nix.pinnedFlakes;
+      }) config.bikeshed.nix.pinnedFlakes;
 
-      nixPath = map (v: "${v}=flake:${v}") (builtins.attrNames config.davids.nix.pinnedFlakes);
+      nixPath = map (v: "${v}=flake:${v}") (builtins.attrNames config.bikeshed.nix.pinnedFlakes);
     };
 
     home-manager = {

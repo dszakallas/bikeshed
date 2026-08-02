@@ -17,7 +17,7 @@ let
   assembled-skills =
     pkgs.runCommand "assembled-skills"
       {
-        entries = lib.mapAttrsToList (name: path: "${name}:${path}") config.davids.agents.skills.entries;
+        entries = lib.mapAttrsToList (name: path: "${name}:${path}") config.bikeshed.agents.skills.entries;
       }
       ''
         mkdir -p $out
@@ -161,7 +161,7 @@ let
 
       config =
         let
-          cfg = config.davids.agents.${name};
+          cfg = config.bikeshed.agents.${name};
           memoryFile = "${config.home.homeDirectory}/${cfg.memory.directory}/${cfg.memory.target}";
         in
         mkIf cfg.enable (mkMerge [
@@ -169,7 +169,7 @@ let
             home.packages = if cfg.package == null then [ ] else [ cfg.package ];
             home.sessionVariables = sessionVariables;
           }
-          (mkIf (cfg.linkSkills && config.davids.agents.skills.enable) {
+          (mkIf (cfg.linkSkills && config.bikeshed.agents.skills.enable) {
             home.file."${cfg.skillsDirectory}" = {
               source = assembled-skills;
               recursive = true;
@@ -275,7 +275,7 @@ let
   };
 in
 {
-  options.davids.agents = {
+  options.bikeshed.agents = {
     enable = mkEnableOption "AI agent tools";
     gemini = geminiModule.options;
     claude = claudeModule.options;
@@ -292,19 +292,19 @@ in
     };
   };
 
-  config = mkIf config.davids.agents.enable (mkMerge [
+  config = mkIf config.bikeshed.agents.enable (mkMerge [
     geminiModule.config
     claudeModule.config
     copilotModule.config
     antigravityModule.config
     opencodeModule.config
-    (mkIf config.davids.agents.skills.enable {
+    (mkIf config.bikeshed.agents.skills.enable {
       home.file.".agents/skills" = {
         source = assembled-skills;
         recursive = true;
       };
     })
-    (mkIf (config.davids.agents.antigravity.enable && config.davids.agents.skills.enable) {
+    (mkIf (config.bikeshed.agents.antigravity.enable && config.bikeshed.agents.skills.enable) {
       home.file.".gemini/config/skills" = {
         source = assembled-skills;
         recursive = true;
