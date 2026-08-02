@@ -130,21 +130,21 @@ in
             includeIssuesSection = false
         '';
       };
-      home.file.".davids/bin/ect" = {
+      home.file.".bikeshed/bin/ect" = {
         text = ''
           #!/bin/sh
           exec ${config.bikeshed.emacs.package}/bin/emacsclient --tty "$@"
         '';
         executable = true;
       };
-      home.file.".davids/bin/ecw" = {
+      home.file.".bikeshed/bin/ecw" = {
         text = ''
           #!/bin/sh
           exec ${config.bikeshed.emacs.package}/bin/emacsclient --reuse-frame -a "" "$@"
         '';
         executable = true;
       };
-      home.file.".davids/bin/ec" = {
+      home.file.".bikeshed/bin/ec" = {
         text = ''
           #!/bin/sh
           exec ${config.bikeshed.emacs.package}/bin/emacsclient "$@"

@@ -261,7 +261,7 @@ in
         content = builtins.readFile ./vimrc;
       };
       # in some shell scripts, alias doesn't work, so we use a wrapper script
-      file.".davids/bin/docker" = {
+      file.".bikeshed/bin/docker" = {
         text = ''
           #!/bin/sh
           exec podman "$@"
@@ -282,7 +282,7 @@ in
           g = "git";
         })
       ];
-      file.".ssh/davids.known_hosts" = mkIf config.bikeshed.ssh.enable {
+      file.".ssh/bikeshed.known_hosts" = mkIf config.bikeshed.ssh.enable {
         text = config.bikeshed.ssh.knownHostsLines;
       };
     };
@@ -316,7 +316,7 @@ in
         enable = true;
         bashrcExtra = unmanagedFile "bashrc";
         profileExtra = ''
-          export PATH="$HOME/.davids/bin:$PATH"
+          export PATH="$HOME/.bikeshed/bin:$PATH"
           # Unmanaged executables
           export PATH="$HOME/.local/bin:$PATH"
         ''
@@ -335,7 +335,7 @@ in
 
         initContent = unmanagedFile "zshrc";
         envExtra = ''
-          export PATH="$HOME/.davids/bin:$PATH"
+          export PATH="$HOME/.bikeshed/bin:$PATH"
           # Unmanaged executables
           export PATH="$HOME/.local/bin:$PATH"
         ''
