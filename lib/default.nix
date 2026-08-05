@@ -4,5 +4,6 @@ let
   text = import ./text.nix ctx;
   imports = import ./imports.nix ctx;
   agents = import ./agents ctx;
+  git = import ./git.nix ctx;
 in
-text // imports // agents
+text // imports // agents // git

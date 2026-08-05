@@ -121,22 +121,10 @@ in
                   default = "";
                   description = "The repository path prefix to match (e.g. org name, or empty for all)";
                 };
-                credential = {
-                  enable = mkOption {
-                    type = bool;
-                    default = false;
-                    description = "Whether to configure git credentials for this prefix";
-                  };
-                  username = mkOption {
-                    type = nullOr str;
-                    default = null;
-                    description = "The credential username. If null, no username is set for this prefix.";
-                  };
-                  helper = mkOption {
-                    type = nullOr str;
-                    default = null;
-                    description = "The credential helper. If null, no helper is set for this prefix.";
-                  };
+                credential = mkOption {
+                  type = ctx.lib.git.credentialType;
+                  default = { };
+                  description = "Credential configuration for this prefix.";
                 };
                 ssh = {
                   enable = mkOption {
