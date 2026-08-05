@@ -128,9 +128,14 @@ in
                     description = "Whether to configure git credentials for this prefix";
                   };
                   username = mkOption {
-                    type = str;
-                    default = "";
-                    description = "The credential username";
+                    type = nullOr str;
+                    default = null;
+                    description = "The credential username. If null, no username is set for this prefix.";
+                  };
+                  helper = mkOption {
+                    type = nullOr str;
+                    default = null;
+                    description = "The credential helper. If null, no helper is set for this prefix.";
                   };
                 };
                 ssh = {
@@ -195,8 +200,9 @@ in
                   if rule.credential.enable then
                     ''
                       [credential "https://github.com/${suffix}"]
-                        username = ${rule.credential.username}
                     ''
+                    + lib.optionalString (rule.credential.username != null) "  username = ${rule.credential.username}\n"
+                    + lib.optionalString (rule.credential.helper != null) "  helper = ${rule.credential.helper}\n"
                   else
                     "";
               in
