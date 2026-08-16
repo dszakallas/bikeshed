@@ -46,12 +46,21 @@ let
   startScript = pkgs.writeShellScript "litellm-start" ''
     set -eu
 
-    mkdir -p "${cfg.stateDir}/ui" "${cfg.stateDir}/tiktoken-cache"
+    mkdir -p "${cfg.stateDir}/ui" "${cfg.stateDir}/tiktoken-cache" "${cfg.stateDir}/site-packages"
     chmod -R u+rwX "${cfg.stateDir}/ui"
 
     export CUSTOM_TIKTOKEN_CACHE_DIR="${cfg.stateDir}/tiktoken-cache"
     export LITELLM_NON_ROOT="true"
     export LITELLM_UI_PATH="${cfg.stateDir}/ui"
+
+    export PATH="${pkgs.nodejs}/bin:${pkgs.prisma-engines_6}/bin:${pkgs.prisma_6}/bin:''${PATH:-}"
+    export PYTHONPATH="${cfg.stateDir}/site-packages:''${PYTHONPATH:-}"
+    export PRISMA_CLI_BINARY="${pkgs.prisma_6}/bin/prisma"
+    export PRISMA_QUERY_ENGINE_BINARY="${pkgs.prisma-engines_6}/bin/query-engine"
+    export PRISMA_SCHEMA_ENGINE_BINARY="${pkgs.prisma-engines_6}/bin/schema-engine"
+    export PRISMA_FMT_BINARY="${pkgs.prisma-engines_6}/bin/prisma-fmt"
+    export PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING="1"
+    export PRISMA_USE_GLOBAL_NODE="true"
 
     ${lib.concatMapStringsSep "\n" (k: "export ${k}=${lib.escapeShellArg cfg.environment.${k}}") (
       builtins.attrNames cfg.environment
@@ -64,6 +73,11 @@ let
         set +o allexport
       fi
     ''}
+
+    if [ ! -f "${cfg.stateDir}/site-packages/prisma/_base_client.py" ]; then
+      cp -r "${pkgs.python3Packages.prisma}/${pkgs.python3.sitePackages}/prisma" "${cfg.stateDir}/site-packages/prisma"
+      chmod -R u+w "${cfg.stateDir}/site-packages"
+    fi
 
     if [ -n "''${DATABASE_URL:-}" ]; then
       if [[ "$DATABASE_URL" =~ postgresql://([^@]+)@([^:/]+)(:([0-9]+))?/([^?]+) ]]; then
@@ -79,21 +93,6 @@ let
           ${pkgs.postgresql}/bin/psql -h "$PG_HOST" -p "$PG_PORT" -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = '$PG_DB'" | grep -q 1 || ${pkgs.postgresql}/bin/createdb -h "$PG_HOST" -p "$PG_PORT" -U postgres -O "$PG_USER" "$PG_DB"
         fi
       fi
-
-      mkdir -p "${cfg.stateDir}/site-packages"
-      if [ ! -d "${cfg.stateDir}/site-packages/prisma" ]; then
-        cp -r "${pkgs.python3Packages.prisma}/${pkgs.python3.sitePackages}/prisma" "${cfg.stateDir}/site-packages/prisma"
-        chmod -R u+w "${cfg.stateDir}/site-packages"
-      fi
-
-      export PATH="${pkgs.nodejs}/bin:${pkgs.prisma_6}/bin:${pkgs.prisma-engines_6}/bin:''${PATH:-}"
-      export PYTHONPATH="${cfg.stateDir}/site-packages:''${PYTHONPATH:-}"
-      export PRISMA_CLI_BINARY="${pkgs.prisma_6}/bin/prisma"
-      export PRISMA_QUERY_ENGINE_BINARY="${pkgs.prisma-engines_6}/bin/query-engine"
-      export PRISMA_SCHEMA_ENGINE_BINARY="${pkgs.prisma-engines_6}/bin/schema-engine"
-      export PRISMA_FMT_BINARY="${pkgs.prisma-engines_6}/bin/prisma-fmt"
-      export PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING="1"
-      export PRISMA_USE_GLOBAL_NODE="true"
 
       ${pkgs.python3Packages.prisma}/bin/prisma py generate --schema "${cfg.package}/${pkgs.python3.sitePackages}/litellm/proxy/schema.prisma"
     fi
