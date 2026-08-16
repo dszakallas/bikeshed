@@ -65,6 +65,22 @@ let
       fi
     ''}
 
+    if [ -n "''${DATABASE_URL:-}" ]; then
+      if [[ "$DATABASE_URL" =~ postgresql://([^@]+)@([^:/]+)(:([0-9]+))?/([^?]+) ]]; then
+        PG_USER="''${BASH_REMATCH[1]}"
+        PG_HOST="''${BASH_REMATCH[2]}"
+        PG_PORT="''${BASH_REMATCH[4]:-5432}"
+        PG_DB="''${BASH_REMATCH[5]}"
+        if [ "$PG_HOST" = "127.0.0.1" ] || [ "$PG_HOST" = "localhost" ]; then
+          until ${pkgs.postgresql}/bin/pg_isready -h "$PG_HOST" -p "$PG_PORT" -U postgres; do
+            sleep 1
+          done
+          ${pkgs.postgresql}/bin/psql -h "$PG_HOST" -p "$PG_PORT" -U postgres -tc "SELECT 1 FROM pg_roles WHERE rolname = '$PG_USER'" | grep -q 1 || ${pkgs.postgresql}/bin/createuser -h "$PG_HOST" -p "$PG_PORT" -U postgres -s "$PG_USER"
+          ${pkgs.postgresql}/bin/psql -h "$PG_HOST" -p "$PG_PORT" -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = '$PG_DB'" | grep -q 1 || ${pkgs.postgresql}/bin/createdb -h "$PG_HOST" -p "$PG_PORT" -U postgres -O "$PG_USER" "$PG_DB"
+        fi
+      fi
+    fi
+
     ${seedTiktokenCacheScript}
 
     exec ${lib.getExe cfg.package} --host ${lib.escapeShellArg cfg.host} --port ${toString cfg.port} --config ${configFile}
