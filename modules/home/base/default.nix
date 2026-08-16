@@ -29,6 +29,7 @@ let
     };
   files = with pkgs; [
     age
+    age-plugin-yubikey
     bat
     findutils
     fswatch
@@ -37,6 +38,7 @@ let
     gnumake
     ripgrep
     rsync
+    ssh-to-age
     sops
     tree
     zstd
