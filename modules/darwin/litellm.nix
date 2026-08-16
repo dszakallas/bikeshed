@@ -79,6 +79,23 @@ let
           ${pkgs.postgresql}/bin/psql -h "$PG_HOST" -p "$PG_PORT" -U postgres -tc "SELECT 1 FROM pg_database WHERE datname = '$PG_DB'" | grep -q 1 || ${pkgs.postgresql}/bin/createdb -h "$PG_HOST" -p "$PG_PORT" -U postgres -O "$PG_USER" "$PG_DB"
         fi
       fi
+
+      LITELLM_SITE_PACKAGES=$(${lib.getExe cfg.package} -c "import litellm.proxy, os; print(os.path.dirname(litellm.proxy.__file__))")
+      PRISMA_SITE_PACKAGES=$(${lib.getExe cfg.package} -c "import prisma, os; print(os.path.dirname(prisma.__file__))")
+
+      mkdir -p "${cfg.stateDir}/site-packages"
+      if [ ! -d "${cfg.stateDir}/site-packages/prisma" ]; then
+        cp -r "$PRISMA_SITE_PACKAGES" "${cfg.stateDir}/site-packages/prisma"
+        chmod -R u+w "${cfg.stateDir}/site-packages"
+      fi
+
+      export PYTHONPATH="${cfg.stateDir}/site-packages:''${PYTHONPATH:-}"
+      export PRISMA_QUERY_ENGINE_BINARY="${pkgs.prisma-engines_6}/bin/query-engine"
+      export PRISMA_SCHEMA_ENGINE_BINARY="${pkgs.prisma-engines_6}/bin/schema-engine"
+      export PRISMA_FMT_BINARY="${pkgs.prisma-engines_6}/bin/prisma-fmt"
+      export PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING="1"
+
+      ${pkgs.python3Packages.prisma}/bin/prisma py generate --schema "$LITELLM_SITE_PACKAGES/schema.prisma"
     fi
 
     ${seedTiktokenCacheScript}
