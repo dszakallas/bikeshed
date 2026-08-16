@@ -80,12 +80,9 @@ let
         fi
       fi
 
-      LITELLM_SITE_PACKAGES=$(${lib.getExe cfg.package} -c "import litellm.proxy, os; print(os.path.dirname(litellm.proxy.__file__))")
-      PRISMA_SITE_PACKAGES=$(${lib.getExe cfg.package} -c "import prisma, os; print(os.path.dirname(prisma.__file__))")
-
       mkdir -p "${cfg.stateDir}/site-packages"
       if [ ! -d "${cfg.stateDir}/site-packages/prisma" ]; then
-        cp -r "$PRISMA_SITE_PACKAGES" "${cfg.stateDir}/site-packages/prisma"
+        cp -r "${pkgs.python3Packages.prisma}/${pkgs.python3.sitePackages}/prisma" "${cfg.stateDir}/site-packages/prisma"
         chmod -R u+w "${cfg.stateDir}/site-packages"
       fi
 
@@ -95,7 +92,7 @@ let
       export PRISMA_FMT_BINARY="${pkgs.prisma-engines_6}/bin/prisma-fmt"
       export PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING="1"
 
-      ${pkgs.python3Packages.prisma}/bin/prisma py generate --schema "$LITELLM_SITE_PACKAGES/schema.prisma"
+      ${pkgs.python3Packages.prisma}/bin/prisma py generate --schema "${cfg.package}/${pkgs.python3.sitePackages}/litellm/proxy/schema.prisma"
     fi
 
     ${seedTiktokenCacheScript}
