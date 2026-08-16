@@ -211,7 +211,7 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    launchd.daemons.litellm = {
+    launchd.user.agents.litellm = {
       serviceConfig = {
         ProgramArguments = [ (toString startScript) ];
         RunAtLoad = true;
