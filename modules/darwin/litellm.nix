@@ -86,12 +86,14 @@ let
         chmod -R u+w "${cfg.stateDir}/site-packages"
       fi
 
+      export PATH="${pkgs.nodejs}/bin:${pkgs.prisma_6}/bin:${pkgs.prisma-engines_6}/bin:''${PATH:-}"
       export PYTHONPATH="${cfg.stateDir}/site-packages:''${PYTHONPATH:-}"
       export PRISMA_CLI_BINARY="${pkgs.prisma_6}/bin/prisma"
       export PRISMA_QUERY_ENGINE_BINARY="${pkgs.prisma-engines_6}/bin/query-engine"
       export PRISMA_SCHEMA_ENGINE_BINARY="${pkgs.prisma-engines_6}/bin/schema-engine"
       export PRISMA_FMT_BINARY="${pkgs.prisma-engines_6}/bin/prisma-fmt"
       export PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING="1"
+      export PRISMA_USE_GLOBAL_NODE="true"
 
       ${pkgs.python3Packages.prisma}/bin/prisma py generate --schema "${cfg.package}/${pkgs.python3.sitePackages}/litellm/proxy/schema.prisma"
     fi
