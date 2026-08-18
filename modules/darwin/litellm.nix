@@ -86,7 +86,7 @@ let
         PG_PORT="''${BASH_REMATCH[4]:-5432}"
         PG_DB="''${BASH_REMATCH[5]}"
         if [ "$PG_HOST" = "127.0.0.1" ] || [ "$PG_HOST" = "localhost" ]; then
-          until ${pkgs.postgresql}/bin/pg_isready -h "$PG_HOST" -p "$PG_PORT" -U postgres; do
+          until ${pkgs.postgresql}/bin/pg_isready -h "$PG_HOST" -p "$PG_PORT" -U postgres >/dev/null 2>&1; do
             sleep 1
           done
           ${pkgs.postgresql}/bin/psql -h "$PG_HOST" -p "$PG_PORT" -U postgres -tc "SELECT 1 FROM pg_roles WHERE rolname = '$PG_USER'" | grep -q 1 || ${pkgs.postgresql}/bin/createuser -h "$PG_HOST" -p "$PG_PORT" -U postgres -s "$PG_USER"
@@ -94,7 +94,9 @@ let
         fi
       fi
 
-      ${pkgs.python3Packages.prisma}/bin/prisma py generate --schema "${cfg.package}/${pkgs.python3.sitePackages}/litellm/proxy/schema.prisma"
+      LITELLM_SCHEMA="${cfg.package}/${pkgs.python3.sitePackages}/litellm/proxy/schema.prisma"
+      ${pkgs.python3Packages.prisma}/bin/prisma py generate --schema "$LITELLM_SCHEMA"
+      ${pkgs.prisma_6}/bin/prisma db push --schema "$LITELLM_SCHEMA" --skip-generate
     fi
 
     ${seedTiktokenCacheScript}
