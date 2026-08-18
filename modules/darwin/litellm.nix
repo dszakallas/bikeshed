@@ -192,6 +192,8 @@ in
           SCARF_NO_ANALYTICS = "True";
           DO_NOT_TRACK = "True";
           ANONYMIZED_TELEMETRY = "False";
+          DISABLE_SCHEMA_MIGRATE = "True";
+          STORE_MODEL_IN_DB = "True";
         };
         example = ''
           {
