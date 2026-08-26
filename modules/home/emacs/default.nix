@@ -103,7 +103,7 @@ in
         [
           config.bikeshed.emacs.package
           # lsp dependencies
-          nodejs_24
+          nodejs
           # vterm build dependencies
           cmakeMinimal
           glibtool

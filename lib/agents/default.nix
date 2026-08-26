@@ -43,9 +43,9 @@ let
 
           cleanedServer =
             if serverType == "stdio" then
-              builtins.removeAttrs filtered (urlFields ++ [ "type" ])
+              lib.filterAttrs (k: _: builtins.elem k stdioFields) filtered
             else
-              builtins.removeAttrs filtered (stdioFields ++ [ "type" ]);
+              lib.filterAttrs (k: _: builtins.elem k urlFields) filtered;
         in
         if agent == "gemini" then
           if serverType == "http" then
