@@ -258,6 +258,7 @@ in
         files
         dev
         nix
+        (optionals config.bikeshed.git.enable [ pkgs.git ])
       ];
       file.".gitconfig" = mkIf config.bikeshed.git.enable {
         text = config.bikeshed.git.configLines;
