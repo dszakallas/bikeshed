@@ -28,7 +28,7 @@ To use the agents module in your home-manager configuration, import `bikeshed.ho
 | `bikeshed.agents.enable` | Boolean | Enables user-level AI agent configurations. |
 | `bikeshed.agents.skills.enable` | Boolean | Enables linking custom skill sets. |
 | `bikeshed.agents.skills.entries` | Attribute Set of Paths | Mapping of skill names to paths or derivations. |
-| `bikeshed.agents.<agent>.enable` | Boolean | Enables config for `<agent>` (gemini, claude, copilot, antigravity, opencode). |
+| `bikeshed.agents.<agent>.enable` | Boolean | Enables config for `<agent>` (gemini, claude, copilot, antigravity, opencode, codex). |
 | `bikeshed.agents.<agent>.linkSkills` | Boolean | Whether to link compiled skills into the agent's directory. |
 | `bikeshed.agents.<agent>.memory.enable` | Boolean | Enables user-level memory file management. |
 | `bikeshed.agents.<agent>.memory.source` | Null or Path | Source file for the agent's main memory file (e.g. `GEMINI.md`, `CLAUDE.md`). |
@@ -104,7 +104,7 @@ To manage project-level development environment configurations for AI agents, us
 - `agents.mcp.servers`: Attribute set of MCP servers (writes to `.agents/mcp_config.json`).
 - `agents.skills.enable`: Enables linking skills for this devenv.
 - `agents.skills.entries`: Attribute set of paths to skill directories to assemble and link under `.agents/skills/`.
-- `agents.<agent>.enable`: Configures individual agent integration (claude, gemini, copilot, vscode, opencode).
+- `agents.<agent>.enable`: Configures individual agent integration (claude, gemini, copilot, vscode, opencode, codex).
 - `agents.<agent>.mcp.enable`: Configures target-specific MCP setup (e.g. `.mcp.json` for Claude).
 - `agents.<agent>.mcp.servers`: MCP servers specific to the agent.
 - `agents.<agent>.linkSkills`: Symlinks the compiled skills into the agent's local config folder (e.g., `.claude/skills`).
@@ -285,4 +285,5 @@ bikeshed.lib.agents.mcpServersForAgent agentName genericMcpServers
 ### Server Type Conversions
 - **Gemini**: Automatically renames HTTP transport targets to `httpUrl` and SSE transport targets to `url`.
 - **Claude / Copilot**: Automatically normalizes HTTP and SSE targets to `url` while keeping `type`.
+- **Codex**: Formats MCP servers into TOML `mcp_servers` with `url` and `http_headers`.
 - **Validation**: Enforces fields like `command`, `args`, and `env` are only defined for `stdio` transports, and that `serverUrl` is defined for `http`/`sse` transports.

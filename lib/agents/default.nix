@@ -131,6 +131,24 @@ let
               command = [ filtered.command ] ++ (filtered.args or [ ]);
             }
             // lib.optionalAttrs (filtered ? env) { environment = filtered.env; }
+        else if agent == "codex" then
+          if serverType == "http" || serverType == "sse" then
+            builtins.removeAttrs
+              (
+                cleanedServer
+                // {
+                  url = filtered.serverUrl;
+                }
+                // lib.optionalAttrs (filtered ? headers) {
+                  http_headers = filtered.headers;
+                }
+              )
+              [
+                "serverUrl"
+                "headers"
+              ]
+          else
+            cleanedServer
         else
           cleanedServer // { type = serverType; }
       ) value;
@@ -139,6 +157,8 @@ let
       { servers = formattedServers; }
     else if agent == "opencode" then
       { mcp = formattedServers; }
+    else if agent == "codex" then
+      { mcp_servers = formattedServers; }
     else
       { mcpServers = formattedServers; };
 

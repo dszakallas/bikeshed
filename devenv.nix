@@ -52,6 +52,11 @@ in
         mcp.enable = true;
         mcp.servers = lib'.agents.mcpServersForAgent "opencode" mcpServers;
       };
+      agents.codex = {
+        enable = true;
+        mcp.enable = true;
+        mcp.servers = lib'.agents.mcpServersForAgent "codex" mcpServers;
+      };
     };
   };
 }

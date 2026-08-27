@@ -193,10 +193,11 @@ let
           # the store. The `merge` strategy shallow-merges the top level and then
           # one level deeper, so servers a CLI added at user scope survive;
           # `replace` overwrites the managed top-level keys wholesale, mirroring
-          # the devenv `jq -s '.[0] + .[1]'` merge. Gating on a non-empty servers
-          # set keeps us from touching config files for agents we don't manage.
+          # the devenv merge. Gating on a non-empty servers set keeps us from
+          # touching config files for agents we don't manage.
           (mkIf (cfg.mcp.target != null && cfg.mcp.servers != { }) (
             let
+              isToml = lib.hasSuffix ".toml" cfg.mcp.target;
               managed = pkgs.writeText "${name}-mcp.json" (builtins.toJSON cfg.mcp.servers);
               # `replace`: managed top-level keys win, siblings kept.
               # `merge`: additionally merge object-valued keys one level deeper so
@@ -206,7 +207,7 @@ let
                   ''.[0] as $e | .[1] as $m | $e + $m + ([$m | keys[] | select(($e[.] | type) == "object" and ($m[.] | type) == "object") | {key: ., value: ($e[.] + $m[.])}] | from_entries)''
                 else
                   ".[0] + .[1]";
-              mergeScript = pkgs.writeShellScript "${name}-mcp-merge" ''
+              jsonMergeScript = pkgs.writeShellScript "${name}-mcp-merge" ''
                 set -eu
                 target="$1"
                 managed="$2"
@@ -216,6 +217,30 @@ let
                 mv "$target.tmp" "$target"
                 chmod 600 "$target"
               '';
+
+              yqFilter =
+                if cfg.mcp.strategy == "merge" then
+                  ". as $item ireduce ({}; . * $item)"
+                else
+                  "select(fileIndex == 0) as $orig | select(fileIndex == 1) as $managed | $orig * $managed | .mcp_servers = $managed.mcp_servers";
+              tomlMergeScript = pkgs.writeShellScript "${name}-mcp-merge" ''
+                set -eu
+                target="$1"
+                managed="$2"
+                mkdir -p "$(dirname "$target")"
+                managed_toml=$(mktemp)
+                trap 'rm -f "$managed_toml"' EXIT
+                ${pkgs.yq-go}/bin/yq -p json -o toml '.' "$managed" > "$managed_toml"
+                if [ -s "$target" ]; then
+                  ${pkgs.yq-go}/bin/yq eval-all -p toml -o toml ${lib.escapeShellArg yqFilter} "$target" "$managed_toml" > "$target.tmp"
+                  mv "$target.tmp" "$target"
+                else
+                  cp "$managed_toml" "$target"
+                fi
+                chmod 600 "$target"
+              '';
+
+              mergeScript = if isToml then tomlMergeScript else jsonMergeScript;
             in
             {
               home.activation."${name}Mcp" = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
@@ -273,6 +298,15 @@ let
     defaultLinkSkills = true;
     defaultMcpTarget = ".config/opencode/opencode.json";
   };
+
+  codexModule = mkAgentModule {
+    name = "codex";
+    defaultPackage = null;
+    defaultUserDirectory = ".codex";
+    defaultMemoryFile = "AGENTS.md";
+    defaultLinkSkills = true;
+    defaultMcpTarget = ".codex/config.toml";
+  };
 in
 {
   options.bikeshed.agents = {
@@ -282,6 +316,7 @@ in
     copilot = copilotModule.options;
     antigravity = antigravityModule.options;
     opencode = opencodeModule.options;
+    codex = codexModule.options;
     skills = {
       enable = mkEnableOption "agent skills";
       entries = mkOption {
@@ -298,6 +333,7 @@ in
     copilotModule.config
     antigravityModule.config
     opencodeModule.config
+    codexModule.config
     (mkIf config.bikeshed.agents.skills.enable {
       home.file.".agents/skills" = {
         source = assembled-skills;

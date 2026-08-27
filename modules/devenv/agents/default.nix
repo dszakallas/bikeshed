@@ -25,6 +25,29 @@ let
     before = [ "devenv:enterShell" ];
   };
 
+  mkMergeTomlTask = description: path: managed: {
+    inherit description;
+    exec = ''
+      target="${path}"
+      mkdir -p "$(dirname "$target")"
+      managed_toml=$(mktemp)
+      trap 'rm -f "$managed_toml"' EXIT
+      ${pkgs.yq-go}/bin/yq -p json -o toml '.' << 'EOF' > "$managed_toml"
+      ${builtins.toJSON managed}
+      EOF
+      if [ -s "$target" ]; then
+        ${pkgs.yq-go}/bin/yq eval-all -p toml -o toml \
+          'select(fileIndex == 0) as $orig | select(fileIndex == 1) as $managed | $orig * $managed | .mcp_servers = $managed.mcp_servers' \
+          "$target" "$managed_toml" > "$target.tmp"
+        mv "$target.tmp" "$target"
+      else
+        cp "$managed_toml" "$target"
+      fi
+      chmod 600 "$target"
+    '';
+    before = [ "devenv:enterShell" ];
+  };
+
   mcpServers = lib.mkOption {
     type = lib.types.attrsOf (
       lib.types.submodule {
@@ -245,6 +268,24 @@ in
       default = ".opencode/skills";
       description = "The directory where agent skills are linked for opencode.";
     };
+
+    agents.codex.enable = lib.mkEnableOption "Enable OpenAI Codex coding agent.";
+    agents.codex.mcp.enable = lib.mkEnableOption "Enable OpenAI Codex MCP configuration.";
+    agents.codex.mcp.servers = lib.mkOption {
+      type = lib.types.attrs;
+      default = { };
+      description = "OpenAI Codex MCP servers configuration.";
+    };
+    agents.codex.linkSkills = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Whether to link agent skills for OpenAI Codex.";
+    };
+    agents.codex.skillsDirectory = lib.mkOption {
+      type = lib.types.str;
+      default = ".codex/skills";
+      description = "The directory where agent skills are linked for OpenAI Codex.";
+    };
   };
 
   config = {
@@ -272,6 +313,10 @@ in
       "opencode:setup" = lib.mkIf (config.agents.opencode.enable && config.agents.opencode.mcp.enable) (
         mkMergeTask "Setup opencode coding agent." "$DEVENV_ROOT/opencode.json"
           config.agents.opencode.mcp.servers
+      );
+      "codex:setup" = lib.mkIf (config.agents.codex.enable && config.agents.codex.mcp.enable) (
+        mkMergeTomlTask "Setup OpenAI Codex coding agent." "$DEVENV_ROOT/.codex/config.toml"
+          config.agents.codex.mcp.servers
       );
       "skills:setup" = lib.mkIf config.agents.skills.enable {
         description = "Setup agent skills for the project.";
@@ -305,6 +350,9 @@ in
           ''}
           ${lib.optionalString (config.agents.opencode.enable && config.agents.opencode.linkSkills) ''
             link_skills "$DEVENV_ROOT/${config.agents.opencode.skillsDirectory}"
+          ''}
+          ${lib.optionalString (config.agents.codex.enable && config.agents.codex.linkSkills) ''
+            link_skills "$DEVENV_ROOT/${config.agents.codex.skillsDirectory}"
           ''}
         '';
         before = [ "devenv:enterShell" ];

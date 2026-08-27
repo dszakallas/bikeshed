@@ -67,6 +67,7 @@ configuration wrapped in the target agent's expected top-level key:
 | `"copilot"` | `mcpServers` | `url` (HTTP/SSE); adds `tools = [ "*" ]`; warns on SSE |
 | `"vscode"` | `servers` | `url` (HTTP/SSE); retains `type` |
 | `"opencode"` | `mcp` | `type = "remote"` + `url` (HTTP/SSE); `type = "local"`: `command`, `environment` (stdio) |
+| `"codex"` | `mcp_servers` | `url` (HTTP/SSE), `http_headers` (headers); retains `command`, `args`, `env` (stdio) |
 
 ---
 
