@@ -7,8 +7,11 @@
 }:
 let
   inherit (lib)
+    literalExpression
     mkEnableOption
     mkIf
+    mkOption
+    types
     ;
   moduleName = "davids-dotfiles-common/home/github";
 in
@@ -19,10 +22,30 @@ in
       ssh = {
         enable = mkEnableOption "Enable GitHub SSH configuration";
       };
+      extensions = mkOption {
+        type = types.listOf types.package;
+        default = [ ];
+        example = literalExpression "[ pkgs.gh-stack ]";
+        description = ''
+          gh CLI extensions to install. Each package must expose a
+          `bin/gh-<name>` executable matching its `pname`.
+
+          These are linked into gh's data directory, so gh reports them as
+          local extensions: they carry no version and are not upgradable with
+          `gh extension upgrade`. Because the directory is managed, extensions
+          cannot be installed imperatively with `gh extension install`.
+        '';
+      };
     };
   };
   config = mkIf config.bikeshed.github.enable {
-    home.packages = with pkgs; [ gh ];
+    programs.gh = {
+      enable = true;
+      inherit (config.bikeshed.github) extensions;
+      # home-manager owns config.yml once programs.gh is enabled, which drops
+      # the aliases gh writes into its own default config. Keep them.
+      settings.aliases.co = "pr checkout";
+    };
     programs.zsh = {
       oh-my-zsh.plugins = [ "gh" ];
     };
