@@ -174,6 +174,11 @@ in
       let
         authConfig =
           let
+            # git config truncates unquoted values at the first unescaped
+            # ';' or '#' (treated as an inline comment), so any value that
+            # might contain shell syntax (e.g. a credential.helper script)
+            # must be quoted and have its backslashes/quotes escaped.
+            escapeGitConfigValue = v: ''"'' + builtins.replaceStrings [ "\\" "\"" ] [ "\\\\" "\\\"" ] v + ''"'';
             genRule =
               rule:
               let
@@ -196,8 +201,12 @@ in
                     ''
                       [credential "https://github.com/${suffix}"]
                     ''
-                    + lib.optionalString (rule.credential.username != null) "  username = ${rule.credential.username}\n"
-                    + lib.optionalString (rule.credential.helper != null) "  helper = ${rule.credential.helper}\n"
+                    + lib.optionalString (
+                      rule.credential.username != null
+                    ) "  username = ${escapeGitConfigValue rule.credential.username}\n"
+                    + lib.optionalString (
+                      rule.credential.helper != null
+                    ) "  helper = ${escapeGitConfigValue rule.credential.helper}\n"
                   else
                     "";
               in
