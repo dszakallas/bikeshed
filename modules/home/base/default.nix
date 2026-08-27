@@ -114,6 +114,11 @@ in
           default = [ ];
           description = "External git config files to include";
         };
+        credentialHelper = mkOption {
+          type = nullOr str;
+          default = null;
+          description = "The top-level git credential helper (falls back for any prefix that doesn't set its own). If null, none is configured.";
+        };
         authentication = {
           rules = mkOption {
             type = listOf (submodule {
@@ -221,10 +226,10 @@ in
         name = moduleName;
         content =
           builtins.readFile ./gitconfig
-          + (lib.optionalString hostPlatform.isDarwin ''
+          + (lib.optionalString (config.bikeshed.git.credentialHelper != null) ''
 
             [credential]
-            	helper = osxkeychain
+              helper = ${config.bikeshed.git.credentialHelper}
           '')
           + (lib.optionalString (authConfig != "") ''
 

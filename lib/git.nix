@@ -25,9 +25,21 @@ let
       };
     };
   };
+
+  # A git credential helper that reads the username/password from a pair of
+  # environment variables named "<prefix>USERNAME" and "<prefix>PASSWORD".
+  # Useful for machines where secrets are exported into the shell environment
+  # rather than stored in a platform keychain.
+  mkEnvCredentialHelper =
+    prefix:
+    ''!f() { cat >/dev/null; if [ "$1" = get ]; then printf 'username=%s\npassword=%s\n' "$''
+    + prefix
+    + ''USERNAME" "$''
+    + prefix
+    + ''PASSWORD"; fi; }; f'';
 in
 {
   git = {
-    inherit credentialType;
+    inherit credentialType mkEnvCredentialHelper;
   };
 }

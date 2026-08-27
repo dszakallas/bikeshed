@@ -20,6 +20,14 @@ This directory contains reusable Nix library functions used throughout the dotfi
   text with begin/end markers. Useful for identifying the origin of blocks in generated
   configuration files.
 
+## Git (`git.nix`)
+
+- `git.credentialType`: Shared `home-manager` submodule type for configuring a git credential
+  block (`enable`, `username`, `helper`), reused by `bikeshed.git.authentication.rules.*.credential`
+  and by userPresets that expose their own configurable credential block.
+- `git.mkEnvCredentialHelper prefix`: Returns a git credential helper script that reads the
+  username/password from the environment variables `"${prefix}USERNAME"` and `"${prefix}PASSWORD"`.
+
 ## Agents (`agents/`)
 
 For a comprehensive guide to the MCP server configuration schema, see [agents/README.md](agents/README.md).
