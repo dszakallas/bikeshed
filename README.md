@@ -1,10 +1,10 @@
 # bikeshed
 
-This project hosts a devenv module which I import into each one of my projects. It helps to 
-define project-scoped mcp servers once and use for all my agent harnesses (claude, codex, agy, vscode, 
+This project hosts a devenv module which I import into each one of my projects. It helps to
+define project-scoped mcp servers once and use for all my agent harnesses (claude, codex, agy, vscode,
 copilot-cli, etc.). It also contains some basic git hooks (markdownlint).
 
-bikeshed also hosts shared home-manager modules for my machines. Despite my efforts, most of these are 
+bikeshed also hosts shared home-manager modules for my machines. Despite my efforts, most of these are
 still too opinionated for general usage, probably the `agents` module is the most useful for
 the general audience. It contains utility functions to set up skills, mcp servers, system instructions
 on the user level.
