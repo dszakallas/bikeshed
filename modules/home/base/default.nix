@@ -51,9 +51,6 @@ let
     nmap
     tmux
   ];
-  nix = with pkgs; [
-    devenv
-  ];
   dev = with pkgs; [
     delta
     jq
@@ -63,6 +60,7 @@ let
 in
 {
   imports = [
+    (import ./denv.nix ctx)
     (import ./fzf.nix ctx)
     (import ./k8s.nix ctx)
     (import ./go.nix ctx)
@@ -257,7 +255,6 @@ in
         adm
         files
         dev
-        nix
         (optionals config.bikeshed.git.enable [ pkgs.git ])
       ];
       file.".gitconfig" = mkIf config.bikeshed.git.enable {
@@ -316,13 +313,6 @@ in
         };
       };
 
-      direnv = {
-        enable = true;
-        enableBashIntegration = true;
-        enableZshIntegration = true;
-        nix-direnv.enable = true;
-      };
-
       bash = {
         enable = true;
         bashrcExtra = unmanagedFile "bashrc";
@@ -354,10 +344,7 @@ in
 
         oh-my-zsh = {
           enable = true;
-          plugins = [
-            "direnv"
-          ]
-          ++ optionals config.bikeshed.git.enable [ "git" ];
+          plugins = optionals config.bikeshed.git.enable [ "git" ];
           theme = "fino-time";
         };
       };
