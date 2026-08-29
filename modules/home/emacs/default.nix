@@ -84,7 +84,7 @@ in
         (add-to-list 'load-path spacemacs-start-directory)
         (load "${f}" nil t)
       '';
-      moduleName = "davids-dotfiles-common/home/emacs";
+      moduleName = "bikeshed/home/emacs";
     in
     {
       launchd.agents."eu.szakallas.emacs" = mkIf pkgs.stdenv.hostPlatform.isDarwin {

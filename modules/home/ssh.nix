@@ -20,7 +20,7 @@ let
     mkOption
     types
     ;
-  moduleName = "bikeshed/home/base";
+  moduleName = "bikeshed/home/ssh";
   # Needed on darwin because the system ssh does not ship with sk-libfido2.dylib
   standaloneFIDO2 = "${
     packages.${system}.openssh-sk-standalone

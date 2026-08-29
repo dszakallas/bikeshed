@@ -12,7 +12,7 @@ let
     mkOption
     types
     ;
-  moduleName = "davids-dotfiles-common/home/gpg";
+  moduleName = "bikeshed/home/gpg";
 in
 {
   options =

@@ -12,7 +12,7 @@ let
     mkOption
     types
     ;
-  moduleName = "davids-dotfiles-common/home/base";
+  moduleName = "bikeshed/home/base";
 in
 {
   options =
