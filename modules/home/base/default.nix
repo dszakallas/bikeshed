@@ -11,7 +11,6 @@
 let
   inherit (lib)
     flatten
-    mkIf
     optionals
     ;
   unmanagedFile =
@@ -52,7 +51,7 @@ let
     jq
     yq-go
   ];
-  moduleName = "davids-dotfiles-common/home/base";
+  moduleName = "bikeshed/home/base";
 in
 {
   imports = [
@@ -93,9 +92,6 @@ in
         la = "ls -la";
         v = "vim";
         docker = "podman";
-      };
-      file.".ssh/bikeshed.known_hosts" = mkIf config.bikeshed.ssh.enable {
-        text = config.bikeshed.ssh.knownHostsLines;
       };
     };
     programs = {

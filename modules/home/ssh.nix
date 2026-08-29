@@ -20,7 +20,7 @@ let
     mkOption
     types
     ;
-  moduleName = "davids-dotfiles-common/home/base";
+  moduleName = "bikeshed/home/base";
   # Needed on darwin because the system ssh does not ship with sk-libfido2.dylib
   standaloneFIDO2 = "${
     packages.${system}.openssh-sk-standalone
@@ -96,6 +96,9 @@ in
         };
       };
     };
+    home.file.".bikeshed/share/ssh/known_hosts" = mkIf config.bikeshed.ssh.enable {
+      text = config.bikeshed.ssh.knownHostsLines;
+    };
     programs = {
       ssh = mkIf config.bikeshed.ssh.enable (
         let
@@ -106,8 +109,8 @@ in
             ServerAliveInterval = 0;
             ServerAliveCountMax = 3;
             HashKnownHosts = false;
-            # default ~/.ssh/known_hosts is unmanaged. ~/.ssh/bikeshed.known_hosts is managed by this module
-            UserKnownHostsFile = "~/.ssh/known_hosts ~/.ssh/bikeshed.known_hosts";
+            # default ~/.ssh/known_hosts is unmanaged. ~/.bikeshed/share/ssh/known_hosts is managed by this module
+            UserKnownHostsFile = "~/.ssh/known_hosts ~/.bikeshed/share/ssh/known_hosts";
             ControlMaster = "no";
             ControlPath = "~/.ssh/master-%r@%n:%p";
             ControlPersist = "no";
