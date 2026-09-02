@@ -147,9 +147,9 @@ in
                 IdentitiesOnly = mkIf hasIdentityFile (mkForce true);
                 AddKeysToAgent = mkIf hasIdentityFile (mkForce "yes");
                 # the default macOS ssh does not ship sk-libfido2 so we need to use a standalone library
-                UseKeychain = mkIf (pkgs.stdenv.isDarwin && hasIdentityFile) "yes";
+                UseKeychain = mkIf (pkgs.stdenv.hostPlatform.isDarwin && hasIdentityFile) "yes";
               })
-              (mkIf (hasIdentityFile && isFIDO2 && pkgs.stdenv.isDarwin) {
+              (mkIf (hasIdentityFile && isFIDO2 && pkgs.stdenv.hostPlatform.isDarwin) {
                 SecurityKeyProvider = "${standaloneFIDO2}";
               })
             ]
