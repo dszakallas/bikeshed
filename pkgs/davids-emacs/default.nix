@@ -13,7 +13,8 @@
 # https://github.com/d12frosted/homebrew-emacs-plus
 let
   nsPatches = [
-    ./osx-fix-window-role.patch
+    ./fix-ns-scroll-crash.patch
+    ./fix-ns-x-colors.patch
     ./osx-round-undecorated-frame.patch
     ./osx-system-appearance.patch
   ];
