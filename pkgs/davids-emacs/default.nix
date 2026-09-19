@@ -12,12 +12,22 @@
 # These patches mainly fix GUI issues on macOS, I sourced them from
 # https://github.com/d12frosted/homebrew-emacs-plus
 let
-  nsPatches = [
-    ./fix-ns-scroll-crash.patch
-    ./fix-ns-x-colors.patch
-    ./osx-round-undecorated-frame.patch
-    ./osx-system-appearance.patch
-  ];
+  emacsMajor = lib.versions.major (lib.getVersion emacs);
+  nsPatches =
+    {
+      "30" = [
+        ./patches/emacs-30/fix-window-role.patch
+        ./patches/emacs-30/round-undecorated-frame.patch
+        ./patches/emacs-30/system-appearance.patch
+      ];
+      "31" = [
+        ./patches/emacs-31/fix-ns-scroll-crash.patch
+        ./patches/emacs-31/fix-ns-x-colors.patch
+        ./patches/emacs-31/round-undecorated-frame.patch
+        ./patches/emacs-31/system-appearance.patch
+      ];
+    }
+    .${emacsMajor} or (throw "davids-emacs only supports Emacs 30 and 31");
 in
 (emacs.override {
   inherit withMailutils withNS withNativeCompilation;
