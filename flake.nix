@@ -52,7 +52,6 @@ rec {
         // flake-utils.lib.eachDefaultSystemPassThrough (system: {
           inherit lib;
           systemModules = lib.importRec1 ./modules/system ctx;
-          darwinModules = lib.importRec1 ./modules/darwin ctx;
           homeModules = lib.importRec1 ./modules/home ctx;
           devenvModules = lib.importRec1 ./modules/devenv ctx;
         });
