@@ -15,13 +15,13 @@
 stdenv.mkDerivation rec {
 
   pname = "openssh-sk-standalone";
-  version = "V_10_3_P1";
+  version = "V_10_5_P1";
 
   src = fetchFromGitHub {
     owner = "openssh";
     repo = "openssh-portable";
     rev = version;
-    hash = "sha256-hLmNauPe38AkSe9WIDBuxWS2LhwVI/gR8jWJxaCsk4Q=";
+    hash = "sha256-eXQH/a8KOO+vfk0vEy3Zwce3C93J9Sa9W4TEQqX8U4g=";
   };
 
   preConfigure = ''
