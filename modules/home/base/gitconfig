@@ -4,6 +4,7 @@
 	required = true
 [alias]
 	a = add
+	aa = add --all
 	am = commit --amend --no-edit
 	c = commit
 	co = checkout
@@ -15,17 +16,23 @@
 	fomm = fetch origin main:main
 	last = log -1 HEAD
 	lg = !"git lg1"
+	lo = log --oneline
 	lg1 = log --graph --abbrev-commit --decorate --date=relative --format=format:'%C(bold blue)%h%C(reset) - %C(bold green)(%ar)%C(reset) %C(white)%s%C(reset) %C(dim white)- %an%C(reset)%C(bold yellow)%d%C(reset)' --all
 	lg2 = log --graph --abbrev-commit --decorate --format=format:'%C(bold blue)%h%C(reset) - %C(bold cyan)%aD%C(reset) %C(bold green)(%ar)%C(reset)%C(bold yellow)%d%C(reset)%n''          %C(white)%s%C(reset) %C(dim white)- %an%C(reset)' --all
 	m = merge
 	r = remote
 	rb = rebase
 	rbi = rebase -i
+	rs = restore
 	s = status -s
-	st = status
+	sw = switch
+	st = stash
+	stp = stash pop
+	stl = stash list
 	p = push
 	psuh = push
 	head = rev-parse HEAD
+	wt = worktree
 [push]
 	default = simple
 [hub]
