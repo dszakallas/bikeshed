@@ -27,6 +27,8 @@ in
     };
   };
 
+  config.home.packages = [ pkgs.mas ];
+
   config.targets.darwin.defaults = {
     NSGlobalDomain = {
       NSAutomaticCapitalizationEnabled = false;
