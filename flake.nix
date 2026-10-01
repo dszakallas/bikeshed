@@ -44,13 +44,15 @@ rec {
           packages = (
             let
               pkgs = nixpkgs.legacyPackages.${system};
-              packages = lib.callPackageWithRec (inputs // pkgs) ./pkgs;
+              mkSkill = lib.agents.mkSkill { inherit (pkgs) stdenvNoCC yq-go; };
+              packages = lib.callPackageWithRec (inputs // pkgs // { inherit mkSkill; }) ./pkgs;
             in
             packages
           );
         })
         // flake-utils.lib.eachDefaultSystemPassThrough (system: {
           inherit lib;
+          overlays = lib.importRec1 ./overlays { inherit lib; };
           systemModules = lib.importRec1 ./modules/system ctx;
           homeModules = lib.importRec1 ./modules/home ctx;
           devenvModules = lib.importRec1 ./modules/devenv ctx;
