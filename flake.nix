@@ -12,6 +12,10 @@ rec {
     flake-utils = {
       url = "github:numtide/flake-utils";
     };
+    nix-doom-emacs-unstraightened = {
+      url = "github:marienz/nix-doom-emacs-unstraightened";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   nixConfig = {
