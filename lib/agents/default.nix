@@ -2,9 +2,28 @@
 let
   inherit (nixpkgs) lib;
 
+  harnesses = import ./harnesses ctx;
+
+  defaultHarness = {
+    description = null;
+    mcpKey = "mcpServers";
+    wrapMcpServers = servers: { mcpServers = servers; };
+    transformMcpServerSpec =
+      {
+        cleanedServer,
+        serverType,
+        ...
+      }:
+      cleanedServer // { type = serverType; };
+    homeConfiguration = null;
+    projectConfiguration = null;
+  };
+
   mcpServersForAgent =
     agent: value:
     let
+      harness = harnesses.${agent} or defaultHarness;
+
       formattedServers = lib.mapAttrs (
         name: server:
         let
@@ -47,120 +66,18 @@ let
             else
               lib.filterAttrs (k: _: builtins.elem k urlFields) filtered;
         in
-        if agent == "gemini" then
-          if serverType == "http" then
-            builtins.removeAttrs (
-              cleanedServer
-              // {
-                httpUrl = filtered.serverUrl;
-              }
-            ) [ "serverUrl" ]
-          else if serverType == "sse" then
-            builtins.removeAttrs (
-              cleanedServer
-              // {
-                url = filtered.serverUrl;
-              }
-            ) [ "serverUrl" ]
-          else
+        harness.transformMcpServerSpec {
+          inherit
+            name
+            server
+            serverType
             cleanedServer
-        else if agent == "antigravity" then
-          cleanedServer // { type = serverType; }
-        else if agent == "claude" then
-          if serverType == "http" || serverType == "sse" then
-            builtins.removeAttrs (
-              cleanedServer
-              // {
-                url = filtered.serverUrl;
-                type = serverType;
-              }
-            ) [ "serverUrl" ]
-          else
-            (cleanedServer // { type = serverType; })
-        else if agent == "copilot" then
-          if serverType == "sse" then
-            lib.warn "MCP server '${name}': sse transport is deprecated for GitHub Copilot." (
-              builtins.removeAttrs (
-                cleanedServer
-                // {
-                  url = filtered.serverUrl;
-                  type = "sse";
-                  tools = [ "*" ];
-                }
-              ) [ "serverUrl" ]
-            )
-          else if serverType == "http" then
-            builtins.removeAttrs (
-              cleanedServer
-              // {
-                type = serverType;
-                tools = [ "*" ];
-                url = filtered.serverUrl;
-              }
-            ) [ "serverUrl" ]
-          else
-            cleanedServer
-            // {
-              type = serverType;
-              tools = [ "*" ];
-            }
-        else if agent == "vscode" then
-          if serverType == "http" || serverType == "sse" then
-            builtins.removeAttrs (
-              cleanedServer
-              // {
-                url = filtered.serverUrl;
-                type = serverType;
-              }
-            ) [ "serverUrl" ]
-          else
-            (cleanedServer // { type = serverType; })
-        else if agent == "opencode" then
-          # opencode uses its own schema: servers live under `mcp`, the transport
-          # is `local`/`remote`, stdio command+args collapse into a single array,
-          # and env vars are named `environment`.
-          if serverType == "http" || serverType == "sse" then
-            {
-              type = "remote";
-              url = filtered.serverUrl;
-            }
-            // lib.optionalAttrs (filtered ? headers) { inherit (filtered) headers; }
-          else
-            {
-              type = "local";
-              command = [ filtered.command ] ++ (filtered.args or [ ]);
-            }
-            // lib.optionalAttrs (filtered ? env) { environment = filtered.env; }
-        else if agent == "codex" then
-          if serverType == "http" || serverType == "sse" then
-            builtins.removeAttrs
-              (
-                cleanedServer
-                // {
-                  url = filtered.serverUrl;
-                }
-                // lib.optionalAttrs (filtered ? headers) {
-                  http_headers = filtered.headers;
-                }
-              )
-              [
-                "serverUrl"
-                "headers"
-              ]
-          else
-            cleanedServer
-        else
-          cleanedServer // { type = serverType; }
+            filtered
+            ;
+        }
       ) value;
     in
-    if agent == "vscode" then
-      { servers = formattedServers; }
-    else if agent == "opencode" then
-      { mcp = formattedServers; }
-    else if agent == "codex" then
-      { mcp_servers = formattedServers; }
-    else
-      { mcpServers = formattedServers; };
+    harness.wrapMcpServers formattedServers;
 
   memory = {
     avoidTropes = builtins.readFile ./avoid-tropes.md;
@@ -193,9 +110,116 @@ let
       installPhase = "bash ${./install-skill.sh}";
     };
 
+  assembleSkillsText = ''
+    mkdir -p $out
+    for entry in $entries; do
+      name=''${entry%%:*}
+      path=''${entry#*:}
+
+      if [ -d "$path/skills" ]; then
+        for skill in "$path"/skills/*; do
+          if [ -d "$skill" ]; then
+            skill_name=$(basename "$skill")
+            if [ ! -e "$out/$skill_name" ]; then
+              ln -s "$skill" "$out/$skill_name"
+            fi
+          fi
+        done
+      elif [ -f "$path/SKILL.md" ]; then
+        if [ ! -e "$out/$name" ]; then
+          ln -s "$path" "$out/$name"
+        fi
+      else
+        find "$path" -maxdepth 2 -name SKILL.md | while read -r skill_md; do
+          skill_dir=$(dirname "$skill_md")
+          skill_name=$(basename "$skill_dir")
+          if [ "$skill_dir" != "$path" ]; then
+            if [ ! -e "$out/$skill_name" ]; then
+              ln -s "$skill_dir" "$out/$skill_name"
+            fi
+          fi
+        done
+      fi
+    done
+  '';
+
+  assembleSkills =
+    { runCommand, ... }:
+    entries:
+    let
+      formattedEntries =
+        if builtins.isAttrs entries then
+          lib.mapAttrsToList (name: path: "${name}:${path}") entries
+        else
+          entries;
+    in
+    runCommand "assembled-skills"
+      {
+        entries = formattedEntries;
+      }
+      assembleSkillsText;
+
+  assembledSkills = assembleSkills;
+
+  popularHarnesses = builtins.attrNames harnesses;
+
+  allHarnesses = popularHarnesses;
+
+  mcpServerType = lib.types.submodule {
+    options = {
+      type = lib.mkOption {
+        type = lib.types.enum [
+          "stdio"
+          "http"
+          "sse"
+        ];
+        default = "stdio";
+        description = "Transport type of the MCP server.";
+      };
+      command = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Command to execute for stdio MCP servers.";
+      };
+      args = lib.mkOption {
+        type = lib.types.nullOr (lib.types.listOf lib.types.str);
+        default = null;
+        description = "Arguments to pass to the command for stdio MCP servers.";
+      };
+      env = lib.mkOption {
+        type = lib.types.nullOr (lib.types.attrsOf lib.types.str);
+        default = null;
+        description = "Environment variables for stdio MCP servers.";
+      };
+      serverUrl = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "URL for HTTP or SSE MCP servers.";
+      };
+      headers = lib.mkOption {
+        type = lib.types.nullOr (lib.types.attrsOf lib.types.str);
+        default = null;
+        description = "HTTP headers for HTTP or SSE MCP servers (e.g., for authentication).";
+      };
+    };
+  };
+
+  mcpServersType = lib.types.attrsOf mcpServerType;
 in
 {
   agents = {
-    inherit mcpServersForAgent memory mkSkill;
+    inherit
+      allHarnesses
+      assembleSkills
+      assembledSkills
+      assembleSkillsText
+      harnesses
+      mcpServerType
+      mcpServersType
+      mcpServersForAgent
+      memory
+      mkSkill
+      popularHarnesses
+      ;
   };
 }

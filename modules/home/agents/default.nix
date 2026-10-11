@@ -1,4 +1,4 @@
-{ ... }:
+{ ... }@ctx:
 {
   lib,
   config,
@@ -14,48 +14,16 @@ let
     mkMerge
     ;
 
-  assembled-skills =
-    pkgs.runCommand "assembled-skills"
-      {
-        entries = lib.mapAttrsToList (name: path: "${name}:${path}") config.bikeshed.agents.skills.entries;
-      }
-      ''
-        mkdir -p $out
-        for entry in $entries; do
-          name=''${entry%%:*}
-          path=''${entry#*:}
+  agentsLib = ctx.lib.agents;
 
-          if [ -d "$path/skills" ]; then
-            for skill in "$path"/skills/*; do
-              if [ -d "$skill" ]; then
-                skill_name=$(basename "$skill")
-                if [ ! -e "$out/$skill_name" ]; then
-                  ln -s "$skill" "$out/$skill_name"
-                fi
-              fi
-            done
-          elif [ -f "$path/SKILL.md" ]; then
-            if [ ! -e "$out/$name" ]; then
-              ln -s "$path" "$out/$name"
-            fi
-          else
-            find "$path" -maxdepth 2 -name SKILL.md | while read -r skill_md; do
-              skill_dir=$(dirname "$skill_md")
-              skill_name=$(basename "$skill_dir")
-              if [ "$skill_dir" != "$path" ]; then
-                if [ ! -e "$out/$skill_name" ]; then
-                  ln -s "$skill_dir" "$out/$skill_name"
-                fi
-              fi
-            done
-          fi
-        done
-      '';
+  assembled-skills =
+    agentsLib.assembleSkills pkgs config.bikeshed.agents.skills.entries;
 
   mkAgentModule =
     {
       name,
-      defaultPackage,
+      description ? "${name} agent",
+      defaultPackage ? (_: null),
       defaultUserDirectory,
       defaultMemoryDirectory ? defaultUserDirectory,
       defaultMemoryFile,
@@ -66,10 +34,10 @@ let
     }:
     {
       options = {
-        enable = mkEnableOption "${name} agent";
+        enable = mkEnableOption description;
         package = mkOption {
           type = types.nullOr types.package;
-          default = defaultPackage;
+          default = if builtins.isFunction defaultPackage then defaultPackage pkgs else defaultPackage;
           description = "The package for the ${name} agent.";
         };
         userDirectory = mkOption {
@@ -251,72 +219,25 @@ let
         ]);
     };
 
-  geminiModule = mkAgentModule {
-    name = "gemini";
-    defaultPackage = pkgs.gemini-cli;
-    defaultUserDirectory = ".gemini";
-    defaultMemoryFile = "GEMINI.md";
-    defaultMcpTarget = ".gemini/settings.json";
-  };
+  agentModules = lib.mapAttrs (
+    name: harness:
+    if harness ? homeConfiguration && harness.homeConfiguration != null then
+      mkAgentModule (
+        {
+          inherit name;
+          description = harness.description or "${name} agent";
+        }
+        // harness.homeConfiguration
+      )
+    else
+      null
+  ) agentsLib.harnesses;
 
-  claudeModule = mkAgentModule {
-    name = "claude";
-    defaultPackage = pkgs.claude-code;
-    defaultUserDirectory = ".claude";
-    defaultMemoryFile = "CLAUDE.md";
-    defaultLinkSkills = true;
-    # Config lives under CLAUDE_CONFIG_DIR (set below), not $HOME/.claude.json.
-    defaultMcpTarget = ".claude/.claude.json";
-    sessionVariables = {
-      CLAUDE_CONFIG_DIR = "$HOME/.claude";
-    };
-  };
-
-  copilotModule = mkAgentModule {
-    name = "copilot";
-    defaultPackage = pkgs.github-copilot-cli;
-    defaultUserDirectory = ".copilot";
-    defaultMemoryFile = "copilot-instructions.md";
-    defaultMcpTarget = ".copilot/mcp-config.json";
-  };
-
-  antigravityModule = mkAgentModule {
-    name = "antigravity";
-    defaultPackage = null;
-    defaultUserDirectory = ".gemini/antigravity-cli";
-    defaultMemoryDirectory = ".gemini";
-    defaultMemoryFile = "GEMINI.md";
-    defaultLinkSkills = true;
-    defaultMcpTarget = ".gemini/antigravity-cli/mcp_config.json";
-  };
-
-  opencodeModule = mkAgentModule {
-    name = "opencode";
-    defaultPackage = pkgs.opencode;
-    defaultUserDirectory = ".config/opencode";
-    defaultMemoryFile = "AGENTS.md";
-    defaultLinkSkills = true;
-    defaultMcpTarget = ".config/opencode/opencode.json";
-  };
-
-  codexModule = mkAgentModule {
-    name = "codex";
-    defaultPackage = null;
-    defaultUserDirectory = ".codex";
-    defaultMemoryFile = "AGENTS.md";
-    defaultLinkSkills = true;
-    defaultMcpTarget = ".codex/config.toml";
-  };
+  configuredAgents = lib.filterAttrs (_: m: m != null) agentModules;
 in
 {
   options.bikeshed.agents = {
     enable = mkEnableOption "AI agent tools";
-    gemini = geminiModule.options;
-    claude = claudeModule.options;
-    copilot = copilotModule.options;
-    antigravity = antigravityModule.options;
-    opencode = opencodeModule.options;
-    codex = codexModule.options;
     skills = {
       enable = mkEnableOption "agent skills";
       entries = mkOption {
@@ -325,26 +246,17 @@ in
         description = "Agent skills to install into ~/.agents/skills/. Each attribute name is the skill name and the value is a path or derivation to link.";
       };
     };
-  };
+  } // (lib.mapAttrs (_: m: m.options) configuredAgents);
 
-  config = mkIf config.bikeshed.agents.enable (mkMerge [
-    geminiModule.config
-    claudeModule.config
-    copilotModule.config
-    antigravityModule.config
-    opencodeModule.config
-    codexModule.config
-    (mkIf config.bikeshed.agents.skills.enable {
-      home.file.".agents/skills" = {
-        source = assembled-skills;
-        recursive = true;
-      };
-    })
-    (mkIf (config.bikeshed.agents.antigravity.enable && config.bikeshed.agents.skills.enable) {
-      home.file.".gemini/config/skills" = {
-        source = assembled-skills;
-        recursive = true;
-      };
-    })
-  ]);
+  config = mkIf config.bikeshed.agents.enable (mkMerge (
+    (lib.mapAttrsToList (_: m: m.config) configuredAgents)
+    ++ [
+      (mkIf config.bikeshed.agents.skills.enable {
+        home.file.".agents/skills" = {
+          source = assembled-skills;
+          recursive = true;
+        };
+      })
+    ]
+  ));
 }
