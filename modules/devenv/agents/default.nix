@@ -92,8 +92,7 @@ let
     '';
   };
 
-  assembled-skills =
-    agentsLib.assembleSkills pkgs config.agents.skills.entries;
+  assembled-skills = agentsLib.assembleSkills pkgs config.agents.skills.entries;
 
   mkProjectAgentModule =
     {
@@ -102,7 +101,12 @@ let
       defaultLinkSkills ? false,
       defaultSkillsDirectory ? ".${name}/skills",
       defaultMcpTarget ? null,
-      format ? (if lib.hasSuffix ".toml" (if defaultMcpTarget != null then defaultMcpTarget else "") then "toml" else "json"),
+      format ? (
+        if lib.hasSuffix ".toml" (if defaultMcpTarget != null then defaultMcpTarget else "") then
+          "toml"
+        else
+          "json"
+      ),
     }:
     let
       cfg = config.agents.${name};
@@ -175,7 +179,8 @@ in
           description = "Agent skills to link. Each attribute name is the skill name and the value is a path or derivation to link.";
         };
       };
-    } // (lib.mapAttrs (_: m: m.options) agentModules);
+    }
+    // (lib.mapAttrs (_: m: m.options) agentModules);
   };
 
   config = {
@@ -207,6 +212,9 @@ in
         '';
         before = [ "devenv:enterShell" ];
       };
-    } // (lib.mapAttrs' (name: m: lib.nameValuePair "${name}:setup" m.task) (lib.filterAttrs (_: m: m.task != null) agentModules));
+    }
+    // (lib.mapAttrs' (name: m: lib.nameValuePair "${name}:setup" m.task) (
+      lib.filterAttrs (_: m: m.task != null) agentModules
+    ));
   };
 }

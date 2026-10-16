@@ -16,8 +16,7 @@ let
 
   agentsLib = ctx.lib.agents;
 
-  assembled-skills =
-    agentsLib.assembleSkills pkgs config.bikeshed.agents.skills.entries;
+  assembled-skills = agentsLib.assembleSkills pkgs config.bikeshed.agents.skills.entries;
 
   mkAgentModule =
     {
@@ -246,17 +245,20 @@ in
         description = "Agent skills to install into ~/.agents/skills/. Each attribute name is the skill name and the value is a path or derivation to link.";
       };
     };
-  } // (lib.mapAttrs (_: m: m.options) configuredAgents);
+  }
+  // (lib.mapAttrs (_: m: m.options) configuredAgents);
 
-  config = mkIf config.bikeshed.agents.enable (mkMerge (
-    (lib.mapAttrsToList (_: m: m.config) configuredAgents)
-    ++ [
-      (mkIf config.bikeshed.agents.skills.enable {
-        home.file.".agents/skills" = {
-          source = assembled-skills;
-          recursive = true;
-        };
-      })
-    ]
-  ));
+  config = mkIf config.bikeshed.agents.enable (
+    mkMerge (
+      (lib.mapAttrsToList (_: m: m.config) configuredAgents)
+      ++ [
+        (mkIf config.bikeshed.agents.skills.enable {
+          home.file.".agents/skills" = {
+            source = assembled-skills;
+            recursive = true;
+          };
+        })
+      ]
+    )
+  );
 }

@@ -90,25 +90,61 @@ let
       name,
       version,
       src,
+      sourceRoot ? subDir,
       subDir ? null,
       include ? null,
       exclude ? null,
+      preserveSourceRoot ? false,
+      nativeBuildInputs ? [ ],
+      buildPhase ? null,
+      dontBuild ? (buildPhase == null),
+      dontUnpack ? (buildPhase == null && pnpmDeps == null),
+      pnpmDeps ? null,
+      ...
     }@args:
-    stdenvNoCC.mkDerivation {
-      pname = name;
-      inherit version src;
+    let
+      resolvedSourceRoot = if sourceRoot == null then "" else sourceRoot;
+      extraAttrs = removeAttrs args [
+        "name"
+        "version"
+        "src"
+        "sourceRoot"
+        "subDir"
+        "include"
+        "exclude"
+        "preserveSourceRoot"
+        "nativeBuildInputs"
+        "buildPhase"
+        "dontBuild"
+        "dontUnpack"
+        "pnpmDeps"
+      ];
+      drv = stdenvNoCC.mkDerivation (
+        extraAttrs
+        // {
+          pname = name;
+          inherit version src;
 
-      nativeBuildInputs = [ yq-go ];
+          nativeBuildInputs = [ yq-go ] ++ nativeBuildInputs;
 
-      subDir = if subDir == null then "" else subDir;
-      includeAll = if include == null then "true" else "false";
-      includeList = if include == null then [ ] else include;
-      excludeList = if exclude == null then [ ] else exclude;
+          sourceRoot = resolvedSourceRoot;
+          preserveSourceRoot = if preserveSourceRoot then "true" else "false";
+          includeAll = if include == null then "true" else "false";
+          includeList = if include == null then [ ] else include;
+          excludeList = if exclude == null then [ ] else exclude;
 
-      dontBuild = true;
+          inherit dontUnpack dontBuild;
 
-      installPhase = "bash ${./install-skill.sh}";
-    };
+          installPhase = "bash ${./install-skill.sh}";
+        }
+        // lib.optionalAttrs (buildPhase != null) { inherit buildPhase; }
+        // lib.optionalAttrs (pnpmDeps != null) { inherit pnpmDeps; }
+      );
+    in
+    if subDir != null then
+      lib.warn "agents.mkSkill: 'subDir' is deprecated and will be removed in a future release; use 'sourceRoot' instead." drv
+    else
+      drv;
 
   assembleSkillsText = ''
     mkdir -p $out
@@ -153,11 +189,9 @@ let
         else
           entries;
     in
-    runCommand "assembled-skills"
-      {
-        entries = formattedEntries;
-      }
-      assembleSkillsText;
+    runCommand "assembled-skills" {
+      entries = formattedEntries;
+    } assembleSkillsText;
 
   assembledSkills = assembleSkills;
 

@@ -222,8 +222,10 @@ bikeshed.lib.agents.mkSkill pkgs {
   name = "skill-name";
   version = "1.0.0";
   src = ./path-to-source;
+  sourceRoot = "subdir-if-nested";       # Optional, subdirectory within src to search
   include = [ "specific-skill-folder" ]; # Optional, defaults to null (includes all)
   exclude = [ "ignored-skill-folder" ];  # Optional, defaults to []
+  preserveSourceRoot = false;            # Optional, preserve all files in source root (plugin style)
 }
 ```
 
@@ -235,8 +237,10 @@ bikeshed.lib.agents.mkSkill pkgs {
 - **`src`**: The source directory or derivation containing the skills.
   - **Local Path**: You can supply a local directory path (e.g. `./skills` or `inputs.bikeshed.outPath`).
   - **Remote Repository**: Since installing remote community skills is common, you can fetch skills directly from Git/GitHub using helpers like `pkgs.fetchFromGitHub` or `pkgs.fetchgit`.
+- **`sourceRoot`**: An optional subdirectory within `src` containing the skills or plugin files (e.g. `"plugins/my-plugin"`). If omitted, searches `src/skills` if it exists, otherwise the root of `src`.
 - **`include`**: An optional list of skill folder names to explicitly package. If `null`, all discovered skills are included.
 - **`exclude`**: An optional list of skill folder names to filter out of the derivation output.
+- **`preserveSourceRoot`**: An optional boolean (defaults to `false`). When `true`, preserves all files in the source root (such as plugin manifests, packages, agents, and hooks) in the output rather than copying only the discovered skill folders.
 
 ### Behavioral and Directory Structure Rules
 
