@@ -17,8 +17,14 @@ let
     hash = "sha256-8QJy9PJKv9fSDzX9cPPmoqwM34s5JVT/FjcV50dfONE=";
   };
 
-  # Exclude packages/viewer from pnpm workspace before dependency fetching
-  # because the vendored pnpm-lock.yaml does not contain an importer for it.
+  # Exclude packages/viewer from the pnpm workspace before dependency fetching:
+  # the vendored pnpm-lock.yaml has no importer for it. The viewer has no
+  # dependencies of its own, so it is built directly from its build script.
+  #
+  # Patch the dashboard skill's fast path to prefer the bundled viewer over the
+  # GitHub release tarball. No viewer asset is published for this version (the
+  # download 404s) and the Vite dev-server fallback cannot run from the
+  # read-only store.
   patchedSrc = stdenvNoCC.mkDerivation {
     name = "understand-anything-source";
     src = rawSrc;
@@ -26,6 +32,15 @@ let
     postPatch = ''
       substituteInPlace understand-anything-plugin/pnpm-workspace.yaml \
         --replace-fail '  - "packages/*"' $'  - "packages/*"\n  - "!packages/viewer"'
+
+      substituteInPlace understand-anything-plugin/skills/understand-dashboard/SKILL.md \
+        --replace-fail \
+        'npx --yes "$VIEWER_URL" "$PROJECT_DIR"' \
+        'if [ -f "$PLUGIN_ROOT/packages/viewer/bin/viewer.mjs" ]; then
+         node "$PLUGIN_ROOT/packages/viewer/bin/viewer.mjs" "$PROJECT_DIR"
+       else
+         npx --yes "$VIEWER_URL" "$PROJECT_DIR"
+       fi'
     '';
     installPhase = ''
       cp -r . $out
@@ -55,9 +70,12 @@ mkSkill {
     pnpmConfigHook
   ];
 
+  # build.mjs builds core and dashboard, then embeds the dashboard frontend and
+  # core's staleness module into packages/viewer/{dist,bin/dist} so the bundled
+  # viewer can serve the graph without network access or a build step.
   buildPhase = ''
     runHook preBuild
-    pnpm --filter @understand-anything/core build
+    node packages/viewer/build.mjs
     runHook postBuild
   '';
 }
