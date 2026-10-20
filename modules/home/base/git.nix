@@ -24,6 +24,7 @@ in
         listOf
         nullOr
         path
+        port
         str
         submodule
         ;
@@ -67,6 +68,16 @@ in
           rules = mkOption {
             type = listOf (submodule {
               options = {
+                host = mkOption {
+                  type = str;
+                  default = "github.com";
+                  description = "The upstream git host (e.g. github.com, git.kolobok.szakallas.eu)";
+                };
+                httpScheme = mkOption {
+                  type = str;
+                  default = "https";
+                  description = "The HTTP scheme to use (e.g. https or http)";
+                };
                 pathPrefix = mkOption {
                   type = str;
                   default = "";
@@ -88,10 +99,15 @@ in
                     default = "git";
                     description = "The SSH username to use";
                   };
+                  port = mkOption {
+                    type = nullOr port;
+                    default = null;
+                    description = "The SSH port to connect to if non-standard (e.g. 2222)";
+                  };
                   hostAlias = mkOption {
-                    type = str;
-                    default = "github.com";
-                    description = "The SSH host alias/hostname to use";
+                    type = nullOr str;
+                    default = null;
+                    description = "The SSH host alias/hostname to use (defaults to rule.host if null)";
                   };
                   pushOnly = mkOption {
                     type = bool;
@@ -127,23 +143,35 @@ in
               rule:
               let
                 suffix = rule.pathPrefix;
+                httpUrl = "${rule.httpScheme}://${rule.host}/${suffix}";
+                effectiveHostAlias = if rule.ssh.hostAlias != null then rule.ssh.hostAlias else rule.host;
+                sshPortSuffix = lib.optionalString (rule.ssh.port != null) ":${toString rule.ssh.port}";
+
+                # Rewritten SSH destination URL
+                targetSshUrl = "ssh://${rule.ssh.user}@${effectiveHostAlias}${sshPortSuffix}/${suffix}";
+
+                # Upstream SSH URLs to match and rewrite
+                upstreamUrl = "ssh://${rule.ssh.user}@${rule.host}${sshPortSuffix}/${suffix}";
+                upstreamScpUrl = "${rule.ssh.user}@${rule.host}:${suffix}";
+
                 sshBlock =
                   if rule.ssh.enable then
                     let
                       insteadOfKey = if rule.ssh.pushOnly then "pushInsteadOf" else "insteadOf";
-                      gitSshUrl = "git@github.com:${suffix}";
+                      upstreamRewrite =
+                        lib.optionalString (targetSshUrl != upstreamUrl) "  insteadOf = ${upstreamUrl}\n"
+                        + lib.optionalString (rule.ssh.port == null && targetSshUrl != upstreamScpUrl) "  insteadOf = ${upstreamScpUrl}\n";
                     in
                     ''
-                      [url "ssh://${rule.ssh.user}@${rule.ssh.hostAlias}/${suffix}"]
-                        insteadOf = ${gitSshUrl}
-                        ${insteadOfKey} = https://github.com/${suffix}
-                    ''
+                      [url "${targetSshUrl}"]
+                        ${insteadOfKey} = ${httpUrl}
+                      ${upstreamRewrite}''
                   else
                     "";
                 credBlock =
                   if rule.credential.enable then
                     ''
-                      [credential "https://github.com/${suffix}"]
+                      [credential "${httpUrl}"]
                     ''
                     + lib.optionalString (
                       rule.credential.username != null
