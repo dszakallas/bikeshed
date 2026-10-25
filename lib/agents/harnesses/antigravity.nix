@@ -24,5 +24,9 @@
     defaultMcpTarget = ".gemini/antigravity-cli/mcp_config.json";
   };
 
-  projectConfiguration = null;
+  projectConfiguration = {
+    defaultLinkSkills = false;
+    defaultSkillsDirectory = ".gemini/skills";
+    defaultMcpTarget = null;
+  };
 }

@@ -23,40 +23,19 @@ in
   };
   profiles = {
     "test-agents".module = {
-      agents.mcp = {
+      agents = {
+        mcp = {
+          enable = true;
+          servers = mcpServers;
+        };
+      }
+      // lib.genAttrs lib'.agents.popularHarnesses (name: {
         enable = true;
-        servers = mcpServers;
-      };
-      agents.vscode = {
-        enable = true;
-        mcp.enable = true;
-        mcp.servers = lib'.agents.mcpServersForAgent "vscode" mcpServers;
-      };
-      agents.claude = {
-        enable = true;
-        mcp.enable = true;
-        mcp.servers = lib'.agents.mcpServersForAgent "claude" mcpServers;
-      };
-      agents.copilot = {
-        enable = true;
-        mcp.enable = true;
-        mcp.servers = lib'.agents.mcpServersForAgent "copilot" mcpServers;
-      };
-      agents.gemini = {
-        enable = true;
-        mcp.enable = true;
-        mcp.servers = lib'.agents.mcpServersForAgent "gemini" mcpServers;
-      };
-      agents.opencode = {
-        enable = true;
-        mcp.enable = true;
-        mcp.servers = lib'.agents.mcpServersForAgent "opencode" mcpServers;
-      };
-      agents.codex = {
-        enable = true;
-        mcp.enable = true;
-        mcp.servers = lib'.agents.mcpServersForAgent "codex" mcpServers;
-      };
+        mcp = {
+          enable = true;
+          servers = lib'.agents.mcpServersForAgent name mcpServers;
+        };
+      });
     };
   };
 }

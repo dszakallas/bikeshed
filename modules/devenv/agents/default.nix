@@ -148,20 +148,23 @@ let
       '';
     };
 
-  projectAgents = lib.filterAttrs (
-    _: h: h ? projectConfiguration && h.projectConfiguration != null
-  ) agentsLib.harnesses;
-
   agentModules = lib.mapAttrs (
     name: harness:
+    let
+      projectConfig =
+        if harness ? projectConfiguration && harness.projectConfiguration != null then
+          harness.projectConfiguration
+        else
+          { };
+    in
     mkProjectAgentModule (
       {
         inherit name;
         description = harness.description or "${name} coding agent";
       }
-      // harness.projectConfiguration
+      // projectConfig
     )
-  ) projectAgents;
+  ) agentsLib.harnesses;
 in
 {
   options = {

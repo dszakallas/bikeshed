@@ -12,6 +12,7 @@ Use this skill when configuring or using modules from the `bikeshed` repository,
 
 - **Home-Manager Agent Module**: Manages user-level agent configs, personal memories, system rules, and local MCP server configs.
 - **Devenv Agent Module**: Automatically wires project-level MCP servers and symlinks development environment skills when entering a devenv shell.
+- **Popular Harnesses (`popularHarnesses`)**: Standard list of supported agent harness identifiers (`[ "antigravity" "claude" "codex" "copilot" "gemini" "opencode" "pi" "vscode" ]`) recommended for dynamically configuring all agents without repetitive boilerplate.
 - **Skill Compiler (`mkSkill`)**: A Nix derivation builder that gathers and filters markdown instructions into an agent-readable skills folder.
 - **MCP Server Formatter (`mcpServersForAgent`)**: Formats generic MCP server declarations into the target schemas expected by different agents (e.g. Gemini, Claude, Copilot, VSCode).
 
@@ -28,7 +29,7 @@ To use the agents module in your home-manager configuration, import `bikeshed.ho
 | `bikeshed.agents.enable` | Boolean | Enables user-level AI agent configurations. |
 | `bikeshed.agents.skills.enable` | Boolean | Enables linking custom skill sets. |
 | `bikeshed.agents.skills.entries` | Attribute Set of Paths | Mapping of skill names to paths or derivations. |
-| `bikeshed.agents.<agent>.enable` | Boolean | Enables config for `<agent>` (gemini, claude, copilot, antigravity, opencode, codex). |
+| `bikeshed.agents.<agent>.enable` | Boolean | Enables config for `<agent>` (e.g. any harness from `popularHarnesses`: antigravity, claude, codex, copilot, gemini, opencode, pi, vscode). |
 | `bikeshed.agents.<agent>.linkSkills` | Boolean | Whether to link compiled skills into the agent's directory. |
 | `bikeshed.agents.<agent>.memory.enable` | Boolean | Enables user-level memory file management. |
 | `bikeshed.agents.<agent>.memory.source` | Null or Path | Source file for the agent's main memory file (e.g. `GEMINI.md`, `CLAUDE.md`). |
@@ -92,6 +93,56 @@ To use the agents module in your home-manager configuration, import `bikeshed.ho
 }
 ```
 
+### Configuring Multiple Agents with `popularHarnesses` (Recommended)
+
+Rather than manually repeating configuration blocks for every agent harness, use `bikeshed.lib.agents.popularHarnesses` with `lib.genAttrs` to uniformly configure all supported agents (`antigravity`, `claude`, `codex`, `copilot`, `gemini`, `opencode`, `pi`, `vscode`):
+
+```nix
+{ pkgs, lib, config, bikeshed, ... }:
+
+let
+  mcpServers = {
+    sqlite = {
+      command = "${pkgs.nodejs}/bin/node";
+      args = [ "${pkgs.sqlite-mcp-server}/lib/index.js" "/path/to/db.sqlite" ];
+    };
+  };
+in
+{
+  imports = [
+    bikeshed.homeModules.agents
+  ];
+
+  bikeshed.agents = {
+    enable = true;
+    skills = {
+      enable = true;
+      entries = {
+        local-skills = bikeshed.lib.agents.mkSkill pkgs {
+          name = "local-skills";
+          version = "1.0.0";
+          src = ./skills;
+        };
+      };
+    };
+  }
+  // lib.genAttrs bikeshed.lib.agents.popularHarnesses (agent: {
+    enable = true;
+    linkSkills = true;
+    memory = {
+      enable = true;
+      source = ./memories/${agent}.md;
+    };
+    mcp = {
+      enable = true;
+      servers = bikeshed.lib.agents.mcpServersForAgent agent mcpServers;
+    };
+  });
+}
+```
+
+> **Tip:** If specific agents need custom adjustments (such as setting `package = null` for proprietary tools managed out-of-band), merge them on top of the generated set or combine with `lib.optionalAttrs`.
+
 ---
 
 ## Devenv Configuration
@@ -104,7 +155,7 @@ To manage project-level development environment configurations for AI agents, us
 - `agents.mcp.servers`: Attribute set of MCP servers (writes to `.agents/mcp_config.json`).
 - `agents.skills.enable`: Enables linking skills for this devenv.
 - `agents.skills.entries`: Attribute set of paths to skill directories to assemble and link under `.agents/skills/`.
-- `agents.<agent>.enable`: Configures individual agent integration (claude, gemini, copilot, vscode, opencode, codex).
+- `agents.<agent>.enable`: Configures individual agent integration (`<agent>` corresponds to any identifier in `popularHarnesses`, e.g. `antigravity`, `claude`, `codex`, `copilot`, `gemini`, `opencode`, `pi`, `vscode`).
 - `agents.<agent>.mcp.enable`: Configures target-specific MCP setup (e.g. `.mcp.json` for Claude).
 - `agents.<agent>.mcp.servers`: MCP servers specific to the agent.
 - `agents.<agent>.linkSkills`: Symlinks the compiled skills into the agent's local config folder (e.g., `.claude/skills`).
@@ -181,23 +232,21 @@ To prevent resource-heavy tasks (like pulling remote skills or configuring MCP s
         };
       };
 
-      # Configure target-specific settings for the active agents
-      # This merges our devenv MCP server into their respective configuration files when entering the shell
-      claude = {
+      # Configure target-specific settings for the active agents.
+      # Recommended: dynamically configure all popular agent harnesses
+    }
+    // lib.genAttrs commonLib.agents.popularHarnesses (agent: {
+      enable = true;
+      mcp = {
         enable = true;
-        mcp.enable = true;
-        mcp.servers = commonLib.agents.mcpServersForAgent "claude" mcpServers;
+        servers = commonLib.agents.mcpServersForAgent agent mcpServers;
       };
-      
-      gemini = {
-        enable = true;
-        mcp.enable = true;
-        mcp.servers = commonLib.agents.mcpServersForAgent "gemini" mcpServers;
-      };
-    };
+    });
   };
 }
 ```
+
+> **Note:** Configuring agents dynamically with `commonLib.agents.popularHarnesses` (paired with `lib.genAttrs`) is recommended because it provides immediate coverage for all supported harnesses without repetitive declarations. Each agent's MCP servers are automatically transformed according to its own configuration schema.
 
 ### 3. Entering the shell with the profile
 
@@ -287,7 +336,24 @@ bikeshed.lib.agents.mcpServersForAgent agentName genericMcpServers
 ```
 
 ### Server Type Conversions
+
 - **Gemini**: Automatically renames HTTP transport targets to `httpUrl` and SSE transport targets to `url`.
 - **Claude / Copilot**: Automatically normalizes HTTP and SSE targets to `url` while keeping `type`.
 - **Codex**: Formats MCP servers into TOML `mcp_servers` with `url` and `http_headers`.
 - **Validation**: Enforces fields like `command`, `args`, and `env` are only defined for `stdio` transports, and that `serverUrl` is defined for `http`/`sse` transports.
+
+---
+
+## Dynamically Configuring Agents with `popularHarnesses`
+
+Bikeshed exports two harness lists from its agent library:
+
+- **`bikeshed.lib.agents.popularHarnesses`**: List of standard agent harnesses supported across bikeshed (`[ "antigravity" "claude" "codex" "copilot" "gemini" "opencode" "pi" "vscode" ]`).
+- **`bikeshed.lib.agents.allHarnesses`**: List of all configured harnesses (currently identical to `popularHarnesses`).
+
+### Why `popularHarnesses` is Recommended
+
+1. **Zero Boilerplate**: Avoids declaring repetitive configuration blocks for each individual agent harness in home-manager or devenv profiles.
+2. **Comprehensive Coverage**: Ensures that developers and team members using any supported agent harness (`claude`, `gemini`, `copilot`, `antigravity`, `opencode`, `codex`, `pi`, or `vscode`) automatically inherit the shared skills and project MCP servers.
+3. **Future Proofing**: As support for new harnesses is added to bikeshed, configurations relying on `popularHarnesses` pick them up automatically without manual adjustments.
+4. **Seamless Schema Adaptation**: When combined with `mcpServersForAgent agent genericMcpServers`, each agent's MCP servers are formatted to match its harness requirements (transport types, configuration file paths, and syntax).
