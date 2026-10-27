@@ -123,8 +123,19 @@ Given an existing `~/.claude/.claude.json` and a managed set that redefines `gle
 - `agents.popularHarnesses`: List of popular agent harness identifiers configured across bikeshed:
   `[ "antigravity" "claude" "codex" "copilot" "gemini" "opencode" "pi" "vscode" ]`.
 - `agents.allHarnesses`: List of all agent harness identifiers bikeshed can configure (currently identical to `popularHarnesses`).
-- `agents.memory`: Provides standard agent prompt fragments (`avoidTropes`, `disableAttributions`).
-- `agents.mkSkill`: Helper derivation to package skill sets containing `SKILL.md` files.
+- `agents.memory`: Provides standard agent prompt fragments (`audiences`, `avoidTropes`, `codingWorkflow`, `machineUse`).
+- `agents.mkSkill pkgs { name, version, src, sourceRoot ? null, include ? null, ... }`: Creates a derivation
+  containing skills found in directories with a `SKILL.md` file.
+  - `pkgs`: Package set providing `stdenvNoCC` and `yq-go`.
+  - `name`: Derivation name (`pname`).
+  - `version`: Derivation version.
+  - `src`: Source directory containing skills.
+  - `sourceRoot`: Optional subdirectory within `src` to search (formerly `subDir`). Defaults to `"skills"` if it
+    exists, otherwise the root of `src`.
+  - `include`: Optional list of skill names to include. If `null` or omitted, all discovered skills are included.
+  - `exclude`: Optional list of skill names to exclude.
+  - `preserveSourceRoot`: Optional boolean (default `false`). When `true`, preserves all files in the source root
+    rather than copying only discovered skill folders.
 - `agents.assembleSkills`: Helper derivation to assemble skills from an attribute set or
   list of skill paths into a single derivation containing all discovered skills.
 - `agents.assembleSkillsText`: The raw bash script text executed by `agents.assembleSkills`.

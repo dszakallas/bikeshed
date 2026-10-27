@@ -80,8 +80,10 @@ let
     harness.wrapMcpServers formattedServers;
 
   memory = {
-    avoidTropes = builtins.readFile ./avoid-tropes.md;
-    disableAttributions = builtins.readFile ./disable-attributions.md;
+    avoidTropes = builtins.readFile ./memory/avoid-tropes.md;
+    codingWorkflow = builtins.readFile ./memory/coding-workflow.md;
+    audiences = builtins.readFile ./memory/audiences.md;
+    machineUse = builtins.readFile ./memory/machine-use.md;
   };
 
   mkSkill =

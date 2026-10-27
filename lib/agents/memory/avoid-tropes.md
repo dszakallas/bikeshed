@@ -61,12 +61,9 @@ DO NOT (UNLESS FOR GOOD REASON) FALL INTO ANY OF THE FOLLOWING TROPES, BEHAVIOUR
   ("And yes, I'm openly in love with the platform model").
 - **"Let's break this down":** Do not use pedagogical hand-holding for expert audiences ("Let's break this down",
   "Let's unpack", "Let's dive in").
-- **Vague attributions:** Do not use vague attributions like "Experts argue" or "Industry reports suggest"; name the
-  source or drop the claim.
 - **Title case headings:** Do not capitalise every word in a heading. First word and proper nouns only.
 - **Em-dash addiction:** Do not overuse "—" for dramatic pauses and asides.
 - **Bold-first bullets:** Do not open every list item with a bolded phrase.
 - **Fractal summaries:** Do not preview and recap at every level (section, subsection, document).
-- **Dead metaphor:** Do not repeat a single metaphor throughout instead of introducing and dropping it.
 - **One-point dilution:** Do not restate a single argument ten different ways across thousands of words.
 - **Signposted conclusion:** Do not use signposted conclusions like "In conclusion", "To sum up", or "In summary".
