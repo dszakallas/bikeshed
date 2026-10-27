@@ -13,12 +13,12 @@
 }:
 mkSkill {
   name = "paseo-skills";
-  version = "2026-10-01";
+  version = "2026-10-27";
   src = fetchFromGitHub {
     owner = "getpaseo";
     repo = "paseo";
-    rev = "06213e49bf42442d208df405ed4c215e1e45f690";
-    hash = "sha256-fsIU7hKYMurTw6d45q/8spvxaYzPdSpd0qP1hzYjZsI=";
+    rev = "6b7d49f0d8d21d01565f9517a8c2a30e2a587e2a";
+    hash = "sha256-jHy5Uwz5HM/inHyOtgqjry3liIE4nRKF/gjtKnVS/Yw=";
   };
   inherit include exclude;
 }
