@@ -160,7 +160,9 @@ in
                       insteadOfKey = if rule.ssh.pushOnly then "pushInsteadOf" else "insteadOf";
                       upstreamRewrite =
                         lib.optionalString (targetSshUrl != upstreamUrl) "  insteadOf = ${upstreamUrl}\n"
-                        + lib.optionalString (rule.ssh.port == null && targetSshUrl != upstreamScpUrl) "  insteadOf = ${upstreamScpUrl}\n";
+                        + lib.optionalString (
+                          rule.ssh.port == null && targetSshUrl != upstreamScpUrl
+                        ) "  insteadOf = ${upstreamScpUrl}\n";
                     in
                     ''
                       [url "${targetSshUrl}"]
