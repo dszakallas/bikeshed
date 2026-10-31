@@ -1,39 +1,69 @@
-{ lib, ... }:
 {
+  lib,
+  mcpUtils ? import ../mcp-utils.nix { inherit lib; },
+  ...
+}:
+rec {
   description = "OpenCode coding agent";
-
-  mcpKey = "mcp";
-
-  wrapMcpServers = servers: { mcp = servers; };
 
   # opencode uses its own schema: servers live under `mcp`, the transport
   # is `local`/`remote`, stdio command+args collapse into a single array,
   # and env vars are named `environment`.
-  transformMcpServerSpec =
+  mcpServers =
+    servers:
+    let
+      cleaned = mcpUtils.cleanMcpServers servers;
+      formattedServers = lib.mapAttrs (
+        name: server:
+        if server.type == "http" || server.type == "sse" then
+          {
+            type = "remote";
+            url = server.serverUrl;
+          }
+          // lib.optionalAttrs (server ? headers) { inherit (server) headers; }
+        else
+          {
+            type = "local";
+            command = [ server.command ] ++ (server.args or [ ]);
+          }
+          // lib.optionalAttrs (server ? env) { environment = server.env; }
+      ) cleaned;
+    in
     {
-      filtered,
-      serverType,
-      ...
+      mcp = formattedServers;
+    };
+
+  formatMcpServers = mcpServers;
+
+  mcpServer =
+    {
+      pkgs,
+      strategy ? "merge",
+      userDirectory,
+      servers,
+      target ? null,
     }:
-    if serverType == "http" || serverType == "sse" then
-      {
-        type = "remote";
-        url = filtered.serverUrl;
-      }
-      // lib.optionalAttrs (filtered ? headers) { inherit (filtered) headers; }
-    else
-      {
-        type = "local";
-        command = [ filtered.command ] ++ (filtered.args or [ ]);
-      }
-      // lib.optionalAttrs (filtered ? env) { environment = filtered.env; };
+    mcpUtils.mkJsonMergeScript {
+      inherit pkgs strategy;
+      managed = mcpServers servers;
+      target = if target != null then target else "${userDirectory}/opencode.json";
+    };
 
   homeConfiguration = {
     defaultPackage = pkgs: pkgs.opencode;
     defaultUserDirectory = ".config/opencode";
     defaultMemoryFile = "AGENTS.md";
     defaultLinkSkills = true;
-    defaultMcpTarget = ".config/opencode/opencode.json";
+    defaultWrapper = {
+      enable = false;
+      executable = null;
+      executableName = "opencode";
+      environment =
+        { userDirectory, ... }:
+        {
+          OPENCODE_CONFIG_DIR = userDirectory;
+        };
+    };
   };
 
   projectConfiguration = {

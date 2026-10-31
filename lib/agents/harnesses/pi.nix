@@ -1,34 +1,61 @@
-{ ... }:
 {
+  lib,
+  mcpUtils ? import ../mcp-utils.nix { inherit lib; },
+  ...
+}:
+rec {
   description = "Pi coding agent";
 
-  mcpKey = "mcpServers";
-
-  wrapMcpServers = servers: { mcpServers = servers; };
-
-  transformMcpServerSpec =
+  mcpServers =
+    servers:
+    let
+      cleaned = mcpUtils.cleanMcpServers servers;
+      formattedServers = lib.mapAttrs (
+        name: server:
+        if server.type == "http" || server.type == "sse" then
+          builtins.removeAttrs (server // { url = server.serverUrl; }) [
+            "serverUrl"
+            "type"
+          ]
+        else
+          builtins.removeAttrs server [ "type" ]
+      ) cleaned;
+    in
     {
-      cleanedServer,
-      filtered,
-      serverType,
-      ...
+      mcpServers = formattedServers;
+    };
+
+  formatMcpServers = mcpServers;
+
+  mcpServer =
+    {
+      pkgs,
+      strategy ? "merge",
+      userDirectory,
+      servers,
+      target ? null,
     }:
-    if serverType == "http" || serverType == "sse" then
-      builtins.removeAttrs (
-        cleanedServer
-        // {
-          url = filtered.serverUrl;
-        }
-      ) [ "serverUrl" ]
-    else
-      cleanedServer;
+    mcpUtils.mkJsonMergeScript {
+      inherit pkgs strategy;
+      managed = mcpServers servers;
+      target = if target != null then target else "${userDirectory}/mcp.json";
+    };
 
   homeConfiguration = {
     defaultPackage = pkgs: pkgs.pi-coding-agent or null;
     defaultUserDirectory = ".pi/agent";
     defaultMemoryFile = "AGENTS.md";
     defaultLinkSkills = true;
-    defaultMcpTarget = ".pi/agent/mcp.json";
+    defaultWrapper = {
+      enable = false;
+      executable = null;
+      executableName = "pi";
+      environment =
+        { userDirectory, ... }:
+        {
+          PI_CODING_AGENT_DIR = userDirectory;
+        };
+    };
   };
 
   projectConfiguration = {

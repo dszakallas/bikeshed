@@ -1,51 +1,79 @@
-{ lib, ... }:
 {
+  lib,
+  mcpUtils ? import ../mcp-utils.nix { inherit lib; },
+  ...
+}:
+rec {
   description = "GitHub Copilot coding agent";
 
-  mcpKey = "mcpServers";
-
-  wrapMcpServers = servers: { mcpServers = servers; };
-
-  transformMcpServerSpec =
-    {
-      name,
-      cleanedServer,
-      filtered,
-      serverType,
-      ...
-    }:
-    if serverType == "sse" then
-      lib.warn "MCP server '${name}': sse transport is deprecated for GitHub Copilot." (
-        builtins.removeAttrs (
-          cleanedServer
+  mcpServers =
+    servers:
+    let
+      cleaned = mcpUtils.cleanMcpServers servers;
+      formattedServers = lib.mapAttrs (
+        name: server:
+        if server.type == "sse" then
+          lib.warn "MCP server '${name}': sse transport is deprecated for GitHub Copilot." (
+            builtins.removeAttrs (
+              server
+              // {
+                url = server.serverUrl;
+                type = "sse";
+                tools = [ "*" ];
+              }
+            ) [ "serverUrl" ]
+          )
+        else if server.type == "http" then
+          builtins.removeAttrs (
+            server
+            // {
+              type = server.type;
+              tools = [ "*" ];
+              url = server.serverUrl;
+            }
+          ) [ "serverUrl" ]
+        else
+          server
           // {
-            url = filtered.serverUrl;
-            type = "sse";
+            type = server.type;
             tools = [ "*" ];
           }
-        ) [ "serverUrl" ]
-      )
-    else if serverType == "http" then
-      builtins.removeAttrs (
-        cleanedServer
-        // {
-          type = serverType;
-          tools = [ "*" ];
-          url = filtered.serverUrl;
-        }
-      ) [ "serverUrl" ]
-    else
-      cleanedServer
-      // {
-        type = serverType;
-        tools = [ "*" ];
-      };
+      ) cleaned;
+    in
+    {
+      mcpServers = formattedServers;
+    };
+
+  formatMcpServers = mcpServers;
+
+  mcpServer =
+    {
+      pkgs,
+      strategy ? "merge",
+      userDirectory,
+      servers,
+      target ? null,
+    }:
+    mcpUtils.mkJsonMergeScript {
+      inherit pkgs strategy;
+      managed = mcpServers servers;
+      target = if target != null then target else "${userDirectory}/mcp-config.json";
+    };
 
   homeConfiguration = {
     defaultPackage = pkgs: pkgs.github-copilot-cli;
     defaultUserDirectory = ".copilot";
     defaultMemoryFile = "copilot-instructions.md";
-    defaultMcpTarget = ".copilot/mcp-config.json";
+    defaultWrapper = {
+      enable = false;
+      executable = null;
+      executableName = "copilot";
+      environment =
+        { userDirectory, ... }:
+        {
+          COPILOT_HOME = userDirectory;
+        };
+    };
   };
 
   projectConfiguration = {

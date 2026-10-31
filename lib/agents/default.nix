@@ -4,80 +4,19 @@ let
 
   harnesses = import ./harnesses ctx;
 
-  defaultHarness = {
-    description = null;
-    mcpKey = "mcpServers";
-    wrapMcpServers = servers: { mcpServers = servers; };
-    transformMcpServerSpec =
-      {
-        cleanedServer,
-        serverType,
-        ...
-      }:
-      cleanedServer // { type = serverType; };
-    homeConfiguration = null;
-    projectConfiguration = null;
-  };
-
   mcpServersForAgent =
     agent: value:
     let
-      harness = harnesses.${agent} or defaultHarness;
-
-      formattedServers = lib.mapAttrs (
-        name: server:
-        let
-          serverType = server.type;
-
-          # Validate mutually exclusive fields
-          stdioFields = [
-            "command"
-            "args"
-            "env"
-          ];
-          urlFields = [
-            "serverUrl"
-            "headers"
-          ];
-
-          hasStdioField = builtins.any (field: server.${field} or null != null) stdioFields;
-          hasUrlField = builtins.any (field: server.${field} or null != null) urlFields;
-
-          validated =
-            if serverType == "stdio" && hasUrlField then
-              throw "MCP server '${name}': stdio type cannot have 'serverUrl' or 'headers' fields"
-            else if (serverType == "http" || serverType == "sse") && hasStdioField then
-              throw "MCP server '${name}': ${serverType} type cannot have 'command', 'args', or 'env' fields"
-            else if (serverType == "http" || serverType == "sse") && server.serverUrl or null == null then
-              throw "MCP server '${name}': ${serverType} type must have 'serverUrl'"
-            else if serverType == "stdio" && server.command or null == null then
-              throw "MCP server '${name}': stdio type must have 'command'"
-            else if serverType == "stdio" && server.args or null == null then
-              server // { args = [ ]; }
-            else
-              server;
-
-          # Filter out null values
-          filtered = lib.filterAttrs (_: v: v != null) validated;
-
-          cleanedServer =
-            if serverType == "stdio" then
-              lib.filterAttrs (k: _: builtins.elem k stdioFields) filtered
-            else
-              lib.filterAttrs (k: _: builtins.elem k urlFields) filtered;
-        in
-        harness.transformMcpServerSpec {
-          inherit
-            name
-            server
-            serverType
-            cleanedServer
-            filtered
-            ;
-        }
-      ) value;
+      harness =
+        harnesses.${agent}
+          or (throw "Unknown agent harness '${agent}' for mcpServersForAgent. Known harnesses: ${lib.concatStringsSep ", " (builtins.attrNames harnesses)}");
     in
-    harness.wrapMcpServers formattedServers;
+    if harness ? mcpServers then
+      harness.mcpServers value
+    else if harness ? formatMcpServers then
+      harness.formatMcpServers value
+    else
+      throw "Agent harness '${agent}' does not define 'mcpServers'.";
 
   memory = {
     avoidTropes = builtins.readFile ./memory/avoid-tropes.md;
@@ -195,8 +134,6 @@ let
       entries = formattedEntries;
     } assembleSkillsText;
 
-  assembledSkills = assembleSkills;
-
   popularHarnesses = builtins.attrNames harnesses;
 
   allHarnesses = popularHarnesses;
@@ -247,8 +184,6 @@ in
     inherit
       allHarnesses
       assembleSkills
-      assembledSkills
-      assembleSkillsText
       harnesses
       mcpServerType
       mcpServersType

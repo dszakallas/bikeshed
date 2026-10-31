@@ -113,13 +113,15 @@ Given an existing `~/.claude/.claude.json` and a managed set that redefines `gle
 ## Other Agents Library Exports
 
 - `agents.harnesses`: Attribute set of harness specifications, each defining `description`,
-  `mcpKey`, `wrapMcpServers`, `transformMcpServerSpec`, optionally `homeConfiguration`
-  (`defaultPackage` function taking `pkgs`, `defaultUserDirectory`, `defaultMemoryFile`,
-  `defaultLinkSkills`, `defaultMcpTarget`, etc.), and optionally `projectConfiguration`
+  `mcpServers`, `mcpServer` (function generating the activation script to merge MCP configuration),
+  optionally `homeConfiguration` (`defaultPackage` function taking `pkgs`, `defaultUserDirectory`,
+  `defaultMemoryFile`, `defaultLinkSkills`, `defaultWrapper`, etc.), and optionally `projectConfiguration`
   (`defaultLinkSkills`, `defaultSkillsDirectory`, `defaultMcpTarget`, `format`, etc.).
 - `agents.mcpServerType`: Submodule option type for an individual generic MCP server
   definition (`type`, `command`, `args`, `env`, `serverUrl`, `headers`).
 - `agents.mcpServersType`: Attribute set option type (`attrsOf mcpServerType`) for declaring generic MCP servers.
+- `agents.mcpServersForAgent`: Formats generic MCP server declarations for a specific agent harness.
+  Throws an error if the agent harness is not recognized or does not define MCP server configuration.
 - `agents.popularHarnesses`: List of popular agent harness identifiers configured across bikeshed:
   `[ "antigravity" "claude" "codex" "copilot" "gemini" "opencode" "pi" "vscode" ]`.
 - `agents.allHarnesses`: List of all agent harness identifiers bikeshed can configure (currently identical to `popularHarnesses`).
@@ -138,4 +140,3 @@ Given an existing `~/.claude/.claude.json` and a managed set that redefines `gle
     rather than copying only discovered skill folders.
 - `agents.assembleSkills`: Helper derivation to assemble skills from an attribute set or
   list of skill paths into a single derivation containing all discovered skills.
-- `agents.assembleSkillsText`: The raw bash script text executed by `agents.assembleSkills`.

@@ -29,12 +29,24 @@ To use the agents module in your home-manager configuration, import `bikeshed.ho
 | `bikeshed.agents.enable` | Boolean | Enables user-level AI agent configurations. |
 | `bikeshed.agents.skills.enable` | Boolean | Enables linking custom skill sets. |
 | `bikeshed.agents.skills.entries` | Attribute Set of Paths | Mapping of skill names to paths or derivations. |
-| `bikeshed.agents.<agent>.enable` | Boolean | Enables config for `<agent>` (e.g. any harness from `popularHarnesses`: antigravity, claude, codex, copilot, gemini, opencode, pi, vscode). |
-| `bikeshed.agents.<agent>.linkSkills` | Boolean | Whether to link compiled skills into the agent's directory. |
-| `bikeshed.agents.<agent>.memory.enable` | Boolean | Enables user-level memory file management. |
-| `bikeshed.agents.<agent>.memory.source` | Null or Path | Source file for the agent's main memory file (e.g. `GEMINI.md`, `CLAUDE.md`). |
-| `bikeshed.agents.<agent>.mcp.enable` | Boolean | Enables merging user-level MCP servers. |
-| `bikeshed.agents.<agent>.mcp.servers` | Attribute Set | MCP server definitions. |
+| `bikeshed.agents.harnesses.<name>.enable` | Boolean | Enables config for harness instance `<name>`. Defaults to true. |
+| `bikeshed.agents.harnesses.<name>.type` | Null or String | Harness type (e.g. `opencode`, `pi`, `antigravity`, `claude`, `codex`, `copilot`, `gemini`). Inferred from `<name>` if null. |
+| `bikeshed.agents.harnesses.<name>.package` | Null or Package | Package providing the underlying agent binary. |
+| `bikeshed.agents.harnesses.<name>.userDirectory` | String | User config directory relative to home (e.g. `.config/opencode`, `.claude`). |
+| `bikeshed.agents.harnesses.<name>.linkSkills` | Boolean | Whether to link compiled skills into the agent's directory under `skills/`. |
+| `bikeshed.agents.harnesses.<name>.skillsDirectory` | String | Directory where agent skills are linked. Defaults to `${userDirectory}/skills`. |
+| `bikeshed.agents.harnesses.<name>.memory.enable` | Boolean | Enables user-level memory file management. |
+| `bikeshed.agents.harnesses.<name>.memory.directory` | String | Directory for memory files. Defaults to `userDirectory`. |
+| `bikeshed.agents.harnesses.<name>.memory.target` | String | Main memory filename (e.g. `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`). |
+| `bikeshed.agents.harnesses.<name>.memory.source` | Null or Path | Source file for the main memory file. |
+| `bikeshed.agents.harnesses.<name>.mcp.strategy` | `"merge"` or `"replace"` | Strategy for merging MCP servers into config file. Defaults to `"merge"`. |
+| `bikeshed.agents.harnesses.<name>.mcp.target` | Null or String | Target config file relative to home into which MCP servers are merged. If null, uses the harness default. |
+| `bikeshed.agents.harnesses.<name>.mcp.servers` | Attribute Set | MCP server definitions (e.g. stdio, http, or sse transport). |
+| `bikeshed.agents.harnesses.<name>.wrapper.enable` | Boolean | Generates an executable wrapper setting environment variables for config loading. Defaults to the harness's `defaultWrapper.enable` (`true` for claude, `false` for others). |
+| `bikeshed.agents.harnesses.<name>.wrapper.executable` | Null, String, or Path | Path to the underlying executable to wrap when `package` is `null` (e.g. `"/opt/homebrew/bin/claude"`). Required if `package` is null and `wrapper.enable` is true. |
+| `bikeshed.agents.harnesses.<name>.wrapper.executableName` | String | Wrapper executable name placed in PATH. Defaults to `<name>`. |
+| `bikeshed.agents.harnesses.<name>.wrapper.environment` | Attribute Set | Additional environment variables set in the wrapper executable. |
+| `bikeshed.agents.harnesses.<name>.wrapper.initExtra` | Strings (lines) | Bash script segment executed directly in the wrapper before running the executable (e.g. for dynamic env vars, runtime secrets, or custom model endpoints). |
 
 ### Example Home-Manager Configuration
 
@@ -72,20 +84,33 @@ To use the agents module in your home-manager configuration, import `bikeshed.ho
       };
     };
 
-    claude = {
-      enable = true;
-      linkSkills = true;
-      memory = {
+    harnesses = {
+      # Standard instance, type inferred from name "claude"
+      claude = {
         enable = true;
-        source = ./memories/CLAUDE.md;
-      };
-      mcp = {
-        enable = true;
-        servers = {
-          sqlite = {
-            command = "${pkgs.nodejs}/bin/node";
-            args = [ "${pkgs.sqlite-mcp-server}/lib/index.js" "/path/to/db.sqlite" ];
+        linkSkills = true;
+        memory = {
+          enable = true;
+          source = ./memories/CLAUDE.md;
+        };
+        mcp = {
+          enable = true;
+          servers = {
+            sqlite = {
+              command = "${pkgs.nodejs}/bin/node";
+              args = [ "${pkgs.sqlite-mcp-server}/lib/index.js" "/path/to/db.sqlite" ];
+            };
           };
+        };
+      };
+
+      # Multi-instance: separate work profile with config dir override
+      claude-work = {
+        type = "claude";
+        userDirectory = ".claude-work";
+        memory = {
+          enable = true;
+          source = ./memories/CLAUDE-work.md;
         };
       };
     };
@@ -95,7 +120,7 @@ To use the agents module in your home-manager configuration, import `bikeshed.ho
 
 ### Configuring Multiple Agents with `popularHarnesses` (Recommended)
 
-Rather than manually repeating configuration blocks for every agent harness, use `bikeshed.lib.agents.popularHarnesses` with `lib.genAttrs` to uniformly configure all supported agents (`antigravity`, `claude`, `codex`, `copilot`, `gemini`, `opencode`, `pi`, `vscode`):
+Rather than manually repeating configuration blocks for every agent harness, use `bikeshed.lib.agents.popularHarnesses` with `lib.genAttrs` to uniformly configure supported agent harnesses under `bikeshed.agents.harnesses`:
 
 ```nix
 { pkgs, lib, config, bikeshed, ... }:
@@ -107,6 +132,7 @@ let
       args = [ "${pkgs.sqlite-mcp-server}/lib/index.js" "/path/to/db.sqlite" ];
     };
   };
+  supportedHomeHarnesses = [ "antigravity" "claude" "codex" "copilot" "gemini" "opencode" "pi" ];
 in
 {
   imports = [
@@ -125,23 +151,23 @@ in
         };
       };
     };
-  }
-  // lib.genAttrs bikeshed.lib.agents.popularHarnesses (agent: {
-    enable = true;
-    linkSkills = true;
-    memory = {
+    harnesses = lib.genAttrs supportedHomeHarnesses (agent: {
       enable = true;
-      source = ./memories/${agent}.md;
-    };
-    mcp = {
-      enable = true;
-      servers = bikeshed.lib.agents.mcpServersForAgent agent mcpServers;
-    };
-  });
+      linkSkills = true;
+      memory = {
+        enable = true;
+        source = ./memories/${agent}.md;
+      };
+      mcp = {
+        enable = true;
+        servers = mcpServers;
+      };
+    });
+  };
 }
 ```
 
-> **Tip:** If specific agents need custom adjustments (such as setting `package = null` for proprietary tools managed out-of-band), merge them on top of the generated set or combine with `lib.optionalAttrs`.
+> **Tip:** If specific agents need custom adjustments (such as setting `package = null` for proprietary tools managed out-of-band), merge them on top of the generated set or combine with `lib.optionalAttrs`. For harnesses that require custom config directories or environment variables (such as `CLAUDE_CONFIG_DIR` for Claude), enable wrapper generation with `wrapper.enable = true` and provide `wrapper.executable` if the tool is installed outside of Nix.
 
 ---
 

@@ -1,18 +1,36 @@
-{ ... }:
 {
+  lib,
+  mcpUtils ? import ../mcp-utils.nix { inherit lib; },
+  ...
+}:
+rec {
   description = "Antigravity coding agent";
 
-  mcpKey = "mcpServers";
-
-  wrapMcpServers = servers: { mcpServers = servers; };
-
-  transformMcpServerSpec =
+  mcpServers =
+    servers:
+    let
+      cleaned = mcpUtils.cleanMcpServers servers;
+      formattedServers = lib.mapAttrs (name: server: server // { type = server.type; }) cleaned;
+    in
     {
-      cleanedServer,
-      serverType,
-      ...
+      mcpServers = formattedServers;
+    };
+
+  formatMcpServers = mcpServers;
+
+  mcpServer =
+    {
+      pkgs,
+      strategy ? "merge",
+      userDirectory,
+      servers,
+      target ? null,
     }:
-    cleanedServer // { type = serverType; };
+    mcpUtils.mkJsonMergeScript {
+      inherit pkgs strategy;
+      managed = mcpServers servers;
+      target = if target != null then target else "${userDirectory}/mcp_config.json";
+    };
 
   homeConfiguration = {
     defaultPackage = pkgs: null;
@@ -21,7 +39,16 @@
     defaultMemoryFile = "GEMINI.md";
     defaultLinkSkills = true;
     defaultSkillsDirectory = ".gemini/config/skills";
-    defaultMcpTarget = ".gemini/antigravity-cli/mcp_config.json";
+    defaultWrapper = {
+      enable = false;
+      executable = null;
+      executableName = "agy";
+      environment =
+        { memoryDirectory, ... }:
+        {
+          GEMINI_HOME = memoryDirectory;
+        };
+    };
   };
 
   projectConfiguration = {

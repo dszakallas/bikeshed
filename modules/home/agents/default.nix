@@ -18,26 +18,95 @@ let
 
   assembled-skills = agentsLib.assembleSkills pkgs config.bikeshed.agents.skills.entries;
 
-  mkAgentModule =
-    {
-      name,
-      description ? "${name} agent",
-      defaultPackage ? (_: null),
-      defaultUserDirectory,
-      defaultMemoryDirectory ? defaultUserDirectory,
-      defaultMemoryFile,
-      defaultLinkSkills ? false,
-      defaultSkillsDirectory ? "${defaultUserDirectory}/skills",
-      defaultMcpTarget ? null,
-      sessionVariables ? { },
-    }:
+  knownHarnessTypes = builtins.attrNames agentsLib.harnesses;
+
+  mkHarnessModule =
+    { name, config, ... }:
+    let
+      rawType = if config.type != null then config.type else name;
+      harnessType =
+        if agentsLib.harnesses ? ${rawType} then
+          rawType
+        else
+          throw "Unknown harness type '${rawType}' for harness '${name}'. Known harness types: ${lib.concatStringsSep ", " knownHarnessTypes}";
+
+      harnessDef = agentsLib.harnesses.${harnessType};
+
+      homeConf =
+        if harnessDef ? homeConfiguration && harnessDef.homeConfiguration != null then
+          harnessDef.homeConfiguration
+        else
+          throw "Harness type '${harnessType}' does not support home configuration.";
+
+      defaultUserDirectory =
+        if homeConf ? defaultUserDirectory then
+          (
+            if name == harnessType then
+              homeConf.defaultUserDirectory
+            else
+              lib.replaceStrings [ harnessType ] [ name ] homeConf.defaultUserDirectory
+          )
+        else
+          ".config/${name}";
+
+      defaultMemoryDirectory =
+        if homeConf ? defaultMemoryDirectory then
+          (
+            if name == harnessType then
+              homeConf.defaultMemoryDirectory
+            else
+              lib.replaceStrings [ harnessType ] [ name ] homeConf.defaultMemoryDirectory
+          )
+        else
+          defaultUserDirectory;
+
+      defaultSkillsDirectory =
+        if homeConf ? defaultSkillsDirectory then
+          (
+            if name == harnessType then
+              homeConf.defaultSkillsDirectory
+            else
+              lib.replaceStrings [ harnessType ] [ name ] homeConf.defaultSkillsDirectory
+          )
+        else
+          "${defaultUserDirectory}/skills";
+
+      defaultWrapper = homeConf.defaultWrapper or { };
+    in
     {
       options = {
-        enable = mkEnableOption description;
+        enable = mkOption {
+          type = types.bool;
+          default = harnessType != null;
+          description = "Whether to enable the ${name} agent harness.";
+        };
+        type = mkOption {
+          type = types.nullOr types.str;
+          default = null;
+          apply =
+            val:
+            let
+              resolved = if val != null then val else name;
+            in
+            if agentsLib.harnesses ? ${resolved} then
+              val
+            else
+              throw "Unknown harness type '${resolved}' for harness '${name}'. Known harness types: ${lib.concatStringsSep ", " knownHarnessTypes}";
+          description = "The harness type (e.g. opencode, pi, antigravity, claude, codex, copilot, gemini). If null, inferred from the instance name.";
+        };
         package = mkOption {
           type = types.nullOr types.package;
-          default = if builtins.isFunction defaultPackage then defaultPackage pkgs else defaultPackage;
-          description = "The package for the ${name} agent.";
+          default =
+            if homeConf ? defaultPackage then
+              (
+                if builtins.isFunction homeConf.defaultPackage then
+                  homeConf.defaultPackage pkgs
+                else
+                  homeConf.defaultPackage
+              )
+            else
+              null;
+          description = "The package for the ${name} agent harness.";
         };
         userDirectory = mkOption {
           type = types.str;
@@ -46,7 +115,7 @@ let
         };
         linkSkills = mkOption {
           type = types.bool;
-          default = defaultLinkSkills;
+          default = homeConf.defaultLinkSkills or false;
           description = "Whether to link agent skills into the ${name} user directory under skills/.";
         };
         skillsDirectory = mkOption {
@@ -68,7 +137,7 @@ let
           };
           target = mkOption {
             type = types.str;
-            default = defaultMemoryFile;
+            default = homeConf.defaultMemoryFile or "AGENTS.md";
             description = "Path to the target file for the main memory file.";
           };
           source = mkOption {
@@ -115,124 +184,142 @@ let
           };
           target = mkOption {
             type = types.nullOr types.str;
-            default = defaultMcpTarget;
-            description = "Config file (relative to home) that ${name} MCP servers are merged into.";
+            default = null;
+            description = "Config file (relative to home) that ${name} MCP servers are merged into. If null, uses the harness default.";
           };
           servers = mkOption {
             type = types.attrs;
             default = { };
-            description = "Agent-shaped MCP servers object (as produced by mcpServersForAgent) merged into ${name}'s config file.";
+            description = "MCP servers to configure for ${name}.";
+          };
+        };
+        wrapper = {
+          enable = mkOption {
+            type = types.bool;
+            default = defaultWrapper.enable or false;
+            description = "Whether to generate an executable wrapper for ${name}.";
+          };
+          executable = mkOption {
+            type = types.nullOr (types.either types.str types.path);
+            default = defaultWrapper.executable or null;
+            description = "Exact path to the underlying executable to wrap when package is null.";
+          };
+          executableName = mkOption {
+            type = types.str;
+            default =
+              if defaultWrapper ? executableName then
+                (if name == harnessType then defaultWrapper.executableName else name)
+              else
+                name;
+            description = "Name of the wrapper executable installed into PATH for ${name}.";
+          };
+          environment = mkOption {
+            type = types.attrsOf types.str;
+            default = { };
+            description = "Additional environment variables to set in the wrapper executable for ${name}.";
+          };
+          initExtra = mkOption {
+            type = types.lines;
+            default = "";
+            description = "Bash script segment to execute in the wrapper before running the wrapped executable for ${name}.";
           };
         };
       };
-
-      config =
-        let
-          cfg = config.bikeshed.agents.${name};
-          memoryFile = "${config.home.homeDirectory}/${cfg.memory.directory}/${cfg.memory.target}";
-        in
-        mkIf cfg.enable (mkMerge [
-          {
-            home.packages = if cfg.package == null then [ ] else [ cfg.package ];
-            home.sessionVariables = sessionVariables;
-          }
-          (mkIf (cfg.linkSkills && config.bikeshed.agents.skills.enable) {
-            home.file."${cfg.skillsDirectory}" = {
-              source = assembled-skills;
-              recursive = true;
-            };
-          })
-          (mkIf (cfg.rules != { }) {
-            home.file = lib.mapAttrs' (ruleName: rule: {
-              name = "${cfg.userDirectory}/rules/${ruleName}";
-              value = if rule.source != null then { source = rule.source; } else { text = rule.content; };
-            }) (lib.filterAttrs (_: r: r.enable) cfg.rules);
-          })
-          (mkIf cfg.memory.enable {
-            home.file."${memoryFile}" =
-              if cfg.memory.source != null then
-                { source = cfg.memory.source; }
-              else
-                { text = if cfg.memory.content != null then cfg.memory.content else ""; };
-          })
-          # User-level MCP servers are merged into the agent's own config file
-          # (which the agent itself also writes to), so we can't symlink it from
-          # the store. The `merge` strategy shallow-merges the top level and then
-          # one level deeper, so servers a CLI added at user scope survive;
-          # `replace` overwrites the managed top-level keys wholesale, mirroring
-          # the devenv merge. Gating on a non-empty servers set keeps us from
-          # touching config files for agents we don't manage.
-          (mkIf (cfg.mcp.target != null && cfg.mcp.servers != { }) (
-            let
-              isToml = lib.hasSuffix ".toml" cfg.mcp.target;
-              managed = pkgs.writeText "${name}-mcp.json" (builtins.toJSON cfg.mcp.servers);
-              # `replace`: managed top-level keys win, siblings kept.
-              # `merge`: additionally merge object-valued keys one level deeper so
-              # individual servers are added/replaced and unmanaged ones remain.
-              jqFilter =
-                if cfg.mcp.strategy == "merge" then
-                  ''.[0] as $e | .[1] as $m | $e + $m + ([$m | keys[] | select(($e[.] | type) == "object" and ($m[.] | type) == "object") | {key: ., value: ($e[.] + $m[.])}] | from_entries)''
-                else
-                  ".[0] + .[1]";
-              jsonMergeScript = pkgs.writeShellScript "${name}-mcp-merge" ''
-                set -eu
-                target="$1"
-                managed="$2"
-                mkdir -p "$(dirname "$target")"
-                [ -e "$target" ] || echo '{}' > "$target"
-                ${pkgs.jq}/bin/jq -s ${lib.escapeShellArg jqFilter} "$target" "$managed" > "$target.tmp"
-                mv "$target.tmp" "$target"
-                chmod 600 "$target"
-              '';
-
-              yqFilter =
-                if cfg.mcp.strategy == "merge" then
-                  ". as $item ireduce ({}; . * $item)"
-                else
-                  "select(fileIndex == 0) as $orig | select(fileIndex == 1) as $managed | $orig * $managed | .mcp_servers = $managed.mcp_servers";
-              tomlMergeScript = pkgs.writeShellScript "${name}-mcp-merge" ''
-                set -eu
-                target="$1"
-                managed="$2"
-                mkdir -p "$(dirname "$target")"
-                managed_toml=$(mktemp)
-                trap 'rm -f "$managed_toml"' EXIT
-                ${pkgs.yq-go}/bin/yq -p json -o toml '.' "$managed" > "$managed_toml"
-                if [ -s "$target" ]; then
-                  ${pkgs.yq-go}/bin/yq eval-all -p toml -o toml ${lib.escapeShellArg yqFilter} "$target" "$managed_toml" > "$target.tmp"
-                  mv "$target.tmp" "$target"
-                else
-                  cp "$managed_toml" "$target"
-                fi
-                chmod 600 "$target"
-              '';
-
-              mergeScript = if isToml then tomlMergeScript else jsonMergeScript;
-            in
-            {
-              home.activation."${name}Mcp" = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-                run ${mergeScript} "${config.home.homeDirectory}/${cfg.mcp.target}" ${managed}
-              '';
-            }
-          ))
-        ]);
     };
 
-  agentModules = lib.mapAttrs (
-    name: harness:
-    if harness ? homeConfiguration && harness.homeConfiguration != null then
-      mkAgentModule (
-        {
-          inherit name;
-          description = harness.description or "${name} agent";
-        }
-        // harness.homeConfiguration
-      )
-    else
-      null
-  ) agentsLib.harnesses;
+  getWrapperPackage =
+    name: cfg:
+    let
+      rawType = if cfg.type != null then cfg.type else name;
+      harnessType =
+        if agentsLib.harnesses ? ${rawType} then
+          rawType
+        else
+          throw "Unknown harness type '${rawType}' for harness '${name}'. Known harness types: ${lib.concatStringsSep ", " knownHarnessTypes}";
+      harnessDef = agentsLib.harnesses.${harnessType};
+      homeConf = harnessDef.homeConfiguration;
+      defaultWrapper = homeConf.defaultWrapper or { };
+      binaryName = homeConf.binaryName or (defaultWrapper.executableName or harnessType);
+      executableName = cfg.wrapper.executableName;
 
-  configuredAgents = lib.filterAttrs (_: m: m != null) agentModules;
+      defaultEnv =
+        if defaultWrapper ? environment then
+          (
+            if builtins.isFunction defaultWrapper.environment then
+              defaultWrapper.environment {
+                userDirectory = "${config.home.homeDirectory}/${cfg.userDirectory}";
+                memoryDirectory = "${config.home.homeDirectory}/${cfg.memory.directory}";
+                inherit (config.home) homeDirectory;
+              }
+            else
+              defaultWrapper.environment
+          )
+        else if homeConf ? environment then
+          homeConf.environment {
+            userDirectory = "${config.home.homeDirectory}/${cfg.userDirectory}";
+            memoryDirectory = "${config.home.homeDirectory}/${cfg.memory.directory}";
+            inherit (config.home) homeDirectory;
+          }
+        else
+          { };
+
+      allEnv = defaultEnv // cfg.wrapper.environment;
+
+      defaultInitExtra =
+        if defaultWrapper ? initExtra then
+          (
+            if builtins.isFunction defaultWrapper.initExtra then
+              defaultWrapper.initExtra {
+                userDirectory = "${config.home.homeDirectory}/${cfg.userDirectory}";
+                memoryDirectory = "${config.home.homeDirectory}/${cfg.memory.directory}";
+                inherit (config.home) homeDirectory;
+              }
+            else
+              defaultWrapper.initExtra
+          )
+        else
+          "";
+
+      allInitExtra = lib.concatStringsSep "\n" (
+        lib.filter (s: s != "") [
+          defaultInitExtra
+          cfg.wrapper.initExtra
+        ]
+      );
+
+      exportLines = lib.concatStrings (
+        lib.mapAttrsToList (k: v: "export ${k}=${lib.escapeShellArg v}\n") allEnv
+      );
+
+      targetExecutable =
+        if cfg.wrapper.executable != null then
+          cfg.wrapper.executable
+        else if cfg.package != null then
+          "${cfg.package}/bin/${binaryName}"
+        else
+          throw "Harness '${name}' has package = null and wrapper.enable = true, but wrapper.executable is null. Please supply the exact path to the executable to wrap (e.g. wrapper.executable = \"/opt/homebrew/bin/${binaryName}\") or set wrapper.enable = false.";
+
+      wrapperScript = pkgs.writeShellScript executableName ''
+        set -eo pipefail
+
+        ${exportLines}
+        ${allInitExtra}
+
+        exec ${lib.escapeShellArg targetExecutable} "$@"
+      '';
+
+      wrappedPackage = pkgs.runCommand "${executableName}-wrapper" { } ''
+        mkdir -p $out/bin
+        ln -s "${wrapperScript}" "$out/bin/${executableName}"
+        ${lib.optionalString (cfg.package != null) ''
+          if [ -d "${cfg.package}/share" ]; then
+            ln -s "${cfg.package}/share" "$out/share"
+          fi
+        ''}
+      '';
+    in
+    if !cfg.wrapper.enable then cfg.package else wrappedPackage;
+
 in
 {
   options.bikeshed.agents = {
@@ -245,20 +332,97 @@ in
         description = "Agent skills to install into ~/.agents/skills/. Each attribute name is the skill name and the value is a path or derivation to link.";
       };
     };
-  }
-  // (lib.mapAttrs (_: m: m.options) configuredAgents);
+    harnesses = mkOption {
+      type = types.attrsOf (types.submodule mkHarnessModule);
+      default = { };
+      description = "AI agent harness instances.";
+    };
+  };
 
-  config = mkIf config.bikeshed.agents.enable (
-    mkMerge (
-      (lib.mapAttrsToList (_: m: m.config) configuredAgents)
+  config = mkIf config.bikeshed.agents.enable {
+    home.packages = lib.concatLists (
+      lib.mapAttrsToList (
+        name: cfg:
+        let
+          pkg = getWrapperPackage name cfg;
+        in
+        if cfg.enable && pkg != null then [ pkg ] else [ ]
+      ) config.bikeshed.agents.harnesses
+    );
+
+    home.file = mkMerge (
+      (lib.mapAttrsToList (
+        name: cfg:
+        let
+          pkg = getWrapperPackage name cfg;
+        in
+        if !cfg.enable then
+          { }
+        else
+          mkMerge [
+            (mkIf (cfg.wrapper.enable && pkg != null) {
+              ".bikeshed/bin/${cfg.wrapper.executableName}".source = "${pkg}/bin/${cfg.wrapper.executableName}";
+            })
+            (mkIf (cfg.linkSkills && config.bikeshed.agents.skills.enable) {
+              "${cfg.skillsDirectory}" = {
+                source = assembled-skills;
+                recursive = true;
+              };
+            })
+            (mkIf (cfg.rules != { }) (
+              lib.mapAttrs' (ruleName: rule: {
+                name = "${cfg.userDirectory}/rules/${ruleName}";
+                value = if rule.source != null then { source = rule.source; } else { text = rule.content; };
+              }) (lib.filterAttrs (_: r: r.enable) cfg.rules)
+            ))
+            (mkIf cfg.memory.enable {
+              "${config.home.homeDirectory}/${cfg.memory.directory}/${cfg.memory.target}" =
+                if cfg.memory.source != null then
+                  { source = cfg.memory.source; }
+                else
+                  { text = if cfg.memory.content != null then cfg.memory.content else ""; };
+            })
+          ]
+      ) config.bikeshed.agents.harnesses)
       ++ [
         (mkIf config.bikeshed.agents.skills.enable {
-          home.file.".agents/skills" = {
+          ".agents/skills" = {
             source = assembled-skills;
             recursive = true;
           };
         })
       ]
-    )
-  );
+    );
+
+    home.activation = mkMerge (
+      lib.mapAttrsToList (
+        name: cfg:
+        let
+          rawType = if cfg.type != null then cfg.type else name;
+          harnessType =
+            if agentsLib.harnesses ? ${rawType} then
+              rawType
+            else
+              throw "Unknown harness type '${rawType}' for harness '${name}'. Known harness types: ${lib.concatStringsSep ", " knownHarnessTypes}";
+          harnessDef = agentsLib.harnesses.${harnessType};
+        in
+        if
+          cfg.enable && harnessDef ? mcpServer && harnessDef.mcpServer != null && cfg.mcp.servers != { }
+        then
+          {
+            "${name}Mcp" = lib.hm.dag.entryAfter [ "writeBoundary" ] (
+              harnessDef.mcpServer {
+                inherit pkgs;
+                inherit (cfg.mcp) strategy;
+                userDirectory = "${config.home.homeDirectory}/${cfg.userDirectory}";
+                target = if cfg.mcp.target != null then "${config.home.homeDirectory}/${cfg.mcp.target}" else null;
+                servers = cfg.mcp.servers;
+              }
+            );
+          }
+        else
+          { }
+      ) config.bikeshed.agents.harnesses
+    );
+  };
 }

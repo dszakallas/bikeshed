@@ -1,38 +1,64 @@
-{ ... }:
 {
+  lib,
+  mcpUtils ? import ../mcp-utils.nix { inherit lib; },
+  ...
+}:
+rec {
   description = "Claude coding agent";
 
-  mcpKey = "mcpServers";
-
-  wrapMcpServers = servers: { mcpServers = servers; };
-
-  transformMcpServerSpec =
+  mcpServers =
+    servers:
+    let
+      cleaned = mcpUtils.cleanMcpServers servers;
+      formattedServers = lib.mapAttrs (
+        name: server:
+        if server.type == "http" || server.type == "sse" then
+          builtins.removeAttrs (
+            server
+            // {
+              url = server.serverUrl;
+              type = server.type;
+            }
+          ) [ "serverUrl" ]
+        else
+          server // { type = server.type; }
+      ) cleaned;
+    in
     {
-      cleanedServer,
-      filtered,
-      serverType,
-      ...
+      mcpServers = formattedServers;
+    };
+
+  formatMcpServers = mcpServers;
+
+  mcpServer =
+    {
+      pkgs,
+      strategy ? "merge",
+      userDirectory,
+      servers,
+      target ? null,
     }:
-    if serverType == "http" || serverType == "sse" then
-      builtins.removeAttrs (
-        cleanedServer
-        // {
-          url = filtered.serverUrl;
-          type = serverType;
-        }
-      ) [ "serverUrl" ]
-    else
-      cleanedServer // { type = serverType; };
+    mcpUtils.mkJsonMergeScript {
+      inherit pkgs strategy;
+      managed = mcpServers servers;
+      target = if target != null then target else "${userDirectory}/.claude.json";
+    };
 
   homeConfiguration = {
     defaultPackage = pkgs: pkgs.claude-code;
     defaultUserDirectory = ".claude";
     defaultMemoryFile = "CLAUDE.md";
     defaultLinkSkills = true;
-    # Config lives under CLAUDE_CONFIG_DIR (set below), not $HOME/.claude.json.
-    defaultMcpTarget = ".claude/.claude.json";
-    sessionVariables = {
-      CLAUDE_CONFIG_DIR = "$HOME/.claude";
+    defaultWrapper = {
+      enable = true;
+      executable = null;
+      executableName = "claude";
+      environment =
+        { userDirectory, ... }:
+        {
+          # We need to set this so claude code searches for ~/.claude/.claude.json for its config file.
+          CLAUDE_CONFIG_DIR = userDirectory;
+        };
     };
   };
 

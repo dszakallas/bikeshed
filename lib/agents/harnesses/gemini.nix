@@ -1,40 +1,65 @@
-{ ... }:
 {
+  lib,
+  mcpUtils ? import ../mcp-utils.nix { inherit lib; },
+  ...
+}:
+rec {
   description = "Gemini coding agent";
 
-  mcpKey = "mcpServers";
-
-  wrapMcpServers = servers: { mcpServers = servers; };
-
-  transformMcpServerSpec =
+  mcpServers =
+    servers:
+    let
+      cleaned = mcpUtils.cleanMcpServers servers;
+      formattedServers = lib.mapAttrs (
+        name: server:
+        if server.type == "http" then
+          builtins.removeAttrs (server // { httpUrl = server.serverUrl; }) [
+            "serverUrl"
+            "type"
+          ]
+        else if server.type == "sse" then
+          builtins.removeAttrs (server // { url = server.serverUrl; }) [
+            "serverUrl"
+            "type"
+          ]
+        else
+          builtins.removeAttrs server [ "type" ]
+      ) cleaned;
+    in
     {
-      cleanedServer,
-      filtered,
-      serverType,
-      ...
+      mcpServers = formattedServers;
+    };
+
+  formatMcpServers = mcpServers;
+
+  mcpServer =
+    {
+      pkgs,
+      strategy ? "merge",
+      userDirectory,
+      servers,
+      target ? null,
     }:
-    if serverType == "http" then
-      builtins.removeAttrs (
-        cleanedServer
-        // {
-          httpUrl = filtered.serverUrl;
-        }
-      ) [ "serverUrl" ]
-    else if serverType == "sse" then
-      builtins.removeAttrs (
-        cleanedServer
-        // {
-          url = filtered.serverUrl;
-        }
-      ) [ "serverUrl" ]
-    else
-      cleanedServer;
+    mcpUtils.mkJsonMergeScript {
+      inherit pkgs strategy;
+      managed = mcpServers servers;
+      target = if target != null then target else "${userDirectory}/settings.json";
+    };
 
   homeConfiguration = {
     defaultPackage = pkgs: pkgs.gemini-cli;
     defaultUserDirectory = ".gemini";
     defaultMemoryFile = "GEMINI.md";
-    defaultMcpTarget = ".gemini/settings.json";
+    defaultWrapper = {
+      enable = false;
+      executable = null;
+      executableName = "gemini";
+      environment =
+        { userDirectory, ... }:
+        {
+          GEMINI_CONFIG_DIR = userDirectory;
+        };
+    };
   };
 
   projectConfiguration = {

@@ -1,7 +1,8 @@
 { nixpkgs, ... }@ctx:
 let
   inherit (nixpkgs) lib;
-  callHarness = f: import f { inherit lib; };
+  mcpUtils = import ../mcp-utils.nix { inherit lib; };
+  callHarness = f: import f { inherit lib mcpUtils; };
 in
 {
   antigravity = callHarness ./antigravity.nix;
