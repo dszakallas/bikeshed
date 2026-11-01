@@ -60,7 +60,7 @@ let
     set -eu
 
     mkdir -m 1777 -p /tmp 2>/dev/null || true
-    mkdir -m 0755 -p ${home} /workspace 2>/dev/null || true
+    mkdir -m 0755 -p ${home} 2>/dev/null || true
 
     ${homeConfig.activationPackage}/activate
 
@@ -130,8 +130,8 @@ dockerTools.buildLayeredImage {
 
   fakeRootCommands = ''
     mkdir -m 1777 -p tmp
-    mkdir -m 0755 -p home/${user} workspace etc/bikeshed/agents/init
-    chown -R ${toString uid}:${toString gid} home/${user} workspace etc/bikeshed/agents/init
+    mkdir -m 0755 -p home/${user} etc/bikeshed/agents/init
+    chown -R ${toString uid}:${toString gid} home/${user} etc/bikeshed/agents/init
 
     # Grant the user full ownership of the Nix store and DB for rootless package management
     mkdir -p nix/store nix/var/nix/profiles/per-user/${user} nix/var/nix/gcroots/per-user/${user} etc/nix
@@ -142,7 +142,7 @@ dockerTools.buildLayeredImage {
   config = {
     User = "${toString uid}:${toString gid}";
     Entrypoint = [ "paseo-sandbox-entrypoint" ];
-    WorkingDir = "/workspace";
+    WorkingDir = "${home}";
     Env = [
       "PATH=${home}/.bikeshed/bin:${home}/.local/bin:${home}/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/bin:/usr/bin"
       "USER=${user}"
@@ -167,7 +167,6 @@ dockerTools.buildLayeredImage {
     };
     Volumes = {
       "${home}" = { };
-      "/workspace" = { };
     };
   };
 }

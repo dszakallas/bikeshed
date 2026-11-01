@@ -280,7 +280,6 @@ files into `/etc/bikeshed/agents/init`:
 ```bash
 docker run -d \
   -v /path/to/my-overrides:/etc/bikeshed/agents/init:ro \
-  -v workspace:/workspace \
   paseo-sandbox:latest
 ```
 
