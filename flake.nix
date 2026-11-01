@@ -39,6 +39,41 @@ rec {
     let
       ctx = (inputs // outputs);
       lib = import ./lib ctx;
+      dockerImages = nixpkgs.lib.genAttrs [ "x86_64-linux" "aarch64-linux" ] (
+        system:
+        let
+          pkgs = nixpkgs.legacyPackages.${system};
+          skills = outputs.packages.${system}.agentskills;
+        in
+        {
+          codebox = lib.agents.mkCodeboxImage pkgs {
+            paseo = outputs.packages.${system}.paseo;
+            modules = [
+              outputs.homeModules.base
+              {
+                home.packages = with pkgs; [
+                  bzip2
+                  curl
+                  devenv
+                  gnugrep
+                  gnutar
+                  gzip
+                  lbzip2
+                  procps
+                  xz
+                ];
+              }
+            ];
+            agents = {
+              skills.entries = {
+                anthropic-skills = skills.anthropic-skills;
+                mattpocock-skills = skills.mattpocock-skills;
+              };
+              harnesses.opencode.enable = true;
+            };
+          };
+        }
+      );
       outputs =
         flake-utils.lib.eachDefaultSystem (system: {
           packages = (
@@ -49,6 +84,11 @@ rec {
             in
             packages
           );
+          checks =
+            let
+              pkgs = nixpkgs.legacyPackages.${system};
+            in
+            import ./checks { inherit pkgs lib; };
         })
         // flake-utils.lib.eachDefaultSystemPassThrough (system: {
           inherit lib;
@@ -58,5 +98,5 @@ rec {
           devenvModules = lib.importRec1 ./modules/devenv ctx;
         });
     in
-    outputs;
+    outputs // { inherit dockerImages; };
 }

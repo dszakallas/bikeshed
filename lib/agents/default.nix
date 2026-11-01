@@ -136,6 +136,22 @@ let
 
   popularHarnesses = builtins.attrNames harnesses;
 
+  harnessConfig = import ./harness-config.nix {
+    inherit
+      lib
+      harnesses
+      mcpServersType
+      mcpServersForAgent
+      assembleSkills
+      ;
+  };
+
+  mkCodeboxImage = import ./codebox.nix {
+    inherit lib harnessConfig assembleSkills;
+    home-manager = ctx.home-manager or null;
+    inherit ctx;
+  };
+
   allHarnesses = popularHarnesses;
 
   mcpServerType = lib.types.submodule {
@@ -181,6 +197,15 @@ let
 in
 {
   agents = {
+    homeHarnesses = harnessConfig.configurableNames;
+    inherit (harnessConfig)
+      agentsOptions
+      mkBaseSpec
+      mkBaseYaml
+      mkCodeboxInit
+      mkHarnessPlan
+      mkConfigMerge
+      ;
     inherit
       allHarnesses
       assembleSkills
@@ -189,6 +214,7 @@ in
       mcpServersType
       mcpServersForAgent
       memory
+      mkCodeboxImage
       mkSkill
       popularHarnesses
       ;

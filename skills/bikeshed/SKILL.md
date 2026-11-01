@@ -1,385 +1,133 @@
 ---
 name: bikeshed
-description: "How to use the common dotfiles repository, including home-manager and devenv agent module configurations, setting up MCP servers, and linking agent skills."
-tags: [nix, home-manager, devenv, agents, dotfiles]
+description: How to use the common dotfiles repository, including home-manager and devenv agent module configurations, setting up MCP servers, and linking agent skills.
 ---
 
-# bikeshed - AI Agent and System Configuration Library
+# Bikeshed Dotfiles Common Configuration
 
-Use this skill when configuring or using modules from the `bikeshed` repository, particularly when setting up home-manager or devenv configuration for AI agents (such as Claude, Gemini, Copilot, or VSCode).
+Use this skill when configuring or using modules from the `bikeshed` repository, especially AI agent setups in `home-manager` or `devenv`.
 
 ## Core Features
 
-- **Home-Manager Agent Module**: Manages user-level agent configs, personal memories, system rules, and local MCP server configs.
+- **Home-Manager Agent Module**: Manages user-level agent configs, personal memories, and local MCP server configs.
 - **Devenv Agent Module**: Automatically wires project-level MCP servers and symlinks development environment skills when entering a devenv shell.
 - **Popular Harnesses (`popularHarnesses`)**: Standard list of supported agent harness identifiers (`[ "antigravity" "claude" "codex" "copilot" "gemini" "opencode" "pi" "vscode" ]`) recommended for dynamically configuring all agents without repetitive boilerplate.
 - **Skill Compiler (`mkSkill`)**: A Nix derivation builder that gathers and filters markdown instructions into an agent-readable skills folder.
-- **MCP Server Formatter (`mcpServersForAgent`)**: Formats generic MCP server declarations into the target schemas expected by different agents (e.g. Gemini, Claude, Copilot, VSCode).
+- **Skill Assembler (`assembleSkills`)**: Aggregates skill paths into a unified directory structure suitable for discovery.
+- **Generic MCP Translation (`mcpServersForAgent`)**: Translates a single generic MCP configuration into schema expected by individual agent tools.
 
 ---
 
 ## Home-Manager Configuration
 
-To use the agents module in your home-manager configuration, import `bikeshed.homeModules.agents`. This exposes options under the `bikeshed.agents` namespace.
+To use the agents module in your home-manager configuration, import `bikeshed.homeModules.agents`.
 
 ### Configuration Options
 
 | Option | Type | Description |
-|--------|------|-------------|
+|---|---|---|
 | `bikeshed.agents.enable` | Boolean | Enables user-level AI agent configurations. |
 | `bikeshed.agents.skills.enable` | Boolean | Enables linking custom skill sets. |
 | `bikeshed.agents.skills.entries` | Attribute Set of Paths | Mapping of skill names to paths or derivations. |
-| `bikeshed.agents.harnesses.<name>.enable` | Boolean | Enables config for harness instance `<name>`. Defaults to true. |
-| `bikeshed.agents.harnesses.<name>.type` | Null or String | Harness type (e.g. `opencode`, `pi`, `antigravity`, `claude`, `codex`, `copilot`, `gemini`). Inferred from `<name>` if null. |
-| `bikeshed.agents.harnesses.<name>.package` | Null or Package | Package providing the underlying agent binary. |
-| `bikeshed.agents.harnesses.<name>.userDirectory` | String | User config directory relative to home (e.g. `.config/opencode`, `.claude`). |
-| `bikeshed.agents.harnesses.<name>.linkSkills` | Boolean | Whether to link compiled skills into the agent's directory under `skills/`. |
-| `bikeshed.agents.harnesses.<name>.skillsDirectory` | String | Directory where agent skills are linked. Defaults to `${userDirectory}/skills`. |
+| `bikeshed.agents.skills.directory` | String | Directory relative to home where all skills are linked (default `.agents/skills`). |
+| `bikeshed.agents.harnesses.<name>.enable` | Boolean | Enables the harness instance. `<name>` selects the harness (any of `agents.homeHarnesses`) unless `harness` is set, so `claude` and `claude-qwen` can both configure Claude. |
+| `bikeshed.agents.harnesses.<name>.harness` | Enum | Harness the instance configures. Defaults to `<name>`. |
+| `bikeshed.agents.harnesses.<name>.package` | Null or Package | Package installed for the harness. |
+| `bikeshed.agents.harnesses.<name>.userDirectory` | String | User directory relative to home. |
+| `bikeshed.agents.harnesses.<name>.linkSkills` | Boolean | Whether to link compiled skills into the harness' skills directory. |
+| `bikeshed.agents.harnesses.<name>.skillsDirectory` | String | Skills directory relative to home. |
 | `bikeshed.agents.harnesses.<name>.memory.enable` | Boolean | Enables user-level memory file management. |
-| `bikeshed.agents.harnesses.<name>.memory.directory` | String | Directory for memory files. Defaults to `userDirectory`. |
-| `bikeshed.agents.harnesses.<name>.memory.target` | String | Main memory filename (e.g. `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`). |
-| `bikeshed.agents.harnesses.<name>.memory.source` | Null or Path | Source file for the main memory file. |
-| `bikeshed.agents.harnesses.<name>.mcp.strategy` | `"merge"` or `"replace"` | Strategy for merging MCP servers into config file. Defaults to `"merge"`. |
-| `bikeshed.agents.harnesses.<name>.mcp.target` | Null or String | Target config file relative to home into which MCP servers are merged. If null, uses the harness default. |
-| `bikeshed.agents.harnesses.<name>.mcp.servers` | Attribute Set | MCP server definitions (e.g. stdio, http, or sse transport). |
+| `bikeshed.agents.harnesses.<name>.memory.source` | Null or Path | Source file for the main memory file (e.g. `GEMINI.md`, `CLAUDE.md`). |
+| `bikeshed.agents.harnesses.<name>.mcp.strategy` | `"merge"` or `"replace"` | How servers combine with the existing config file. |
+| `bikeshed.agents.harnesses.<name>.settings.entries` | Attribute Set | Settings merged into the harness config file, keyed by dotted path: `<path> = { value; strategy = "merge" \| "replace"; }`. |
+| `bikeshed.agents.harnesses.<name>.mcp.servers` | Attribute Set | Generic MCP server definitions (`agents.mcpServersType`), translated to the harness' schema at build time. |
 | `bikeshed.agents.harnesses.<name>.wrapper.enable` | Boolean | Generates an executable wrapper setting environment variables for config loading. Defaults to the harness's `defaultWrapper.enable` (`true` for claude, `false` for others). |
 | `bikeshed.agents.harnesses.<name>.wrapper.executable` | Null, String, or Path | Path to the underlying executable to wrap when `package` is `null` (e.g. `"/opt/homebrew/bin/claude"`). Required if `package` is null and `wrapper.enable` is true. |
 | `bikeshed.agents.harnesses.<name>.wrapper.executableName` | String | Wrapper executable name placed in PATH. Defaults to `<name>`. |
 | `bikeshed.agents.harnesses.<name>.wrapper.environment` | Attribute Set | Additional environment variables set in the wrapper executable. |
-| `bikeshed.agents.harnesses.<name>.wrapper.initExtra` | Strings (lines) | Bash script segment executed directly in the wrapper before running the executable (e.g. for dynamic env vars, runtime secrets, or custom model endpoints). |
+| `bikeshed.agents.harnesses.<name>.wrapper.initExtra` | Strings (lines) | Bash script segment executed directly in the wrapper before running the executable. |
 
 ### Example Home-Manager Configuration
 
 ```nix
-{ pkgs, lib, config, bikeshed, ... }:
-
 {
-  imports = [
-    bikeshed.homeModules.agents
-  ];
-
-  bikeshed.agents = {
-    enable = true;
-    skills = {
-      enable = true;
-      entries = {
-        # Local custom workspace skills
-        local-skills = bikeshed.lib.agents.mkSkill pkgs {
-          name = "local-skills";
-          version = "1.0.0";
-          src = ./skills;
-        };
-
-        # Remote skill set fetched from a GitHub repository
-        cc-skills-golang = bikeshed.lib.agents.mkSkill pkgs {
-          name = "cc-skills-golang";
-          version = "2026-07-02";
-          src = pkgs.fetchFromGitHub {
-            owner = "samber";
-            repo = "cc-skills-golang";
-            rev = "8b2d019212d6a5390d472a7660a8489109d7db49";
-            hash = "sha256-oSFApXKBndeM1wsl6GyPwiDuIgt5bGXWzDtpnmC6SaM=";
-          };
-        };
-      };
-    };
-
-    harnesses = {
-      # Standard instance, type inferred from name "claude"
-      claude = {
-        enable = true;
-        linkSkills = true;
-        memory = {
-          enable = true;
-          source = ./memories/CLAUDE.md;
-        };
-        mcp = {
-          enable = true;
-          servers = {
-            sqlite = {
-              command = "${pkgs.nodejs}/bin/node";
-              args = [ "${pkgs.sqlite-mcp-server}/lib/index.js" "/path/to/db.sqlite" ];
-            };
-          };
-        };
-      };
-
-      # Multi-instance: separate work profile with config dir override
-      claude-work = {
-        type = "claude";
-        userDirectory = ".claude-work";
-        memory = {
-          enable = true;
-          source = ./memories/CLAUDE-work.md;
-        };
-      };
-    };
-  };
-}
-```
-
-### Configuring Multiple Agents with `popularHarnesses` (Recommended)
-
-Rather than manually repeating configuration blocks for every agent harness, use `bikeshed.lib.agents.popularHarnesses` with `lib.genAttrs` to uniformly configure supported agent harnesses under `bikeshed.agents.harnesses`:
-
-```nix
-{ pkgs, lib, config, bikeshed, ... }:
-
+  config,
+  pkgs,
+  lib,
+  bikeshed,
+  ...
+}:
 let
   mcpServers = {
-    sqlite = {
-      command = "${pkgs.nodejs}/bin/node";
-      args = [ "${pkgs.sqlite-mcp-server}/lib/index.js" "/path/to/db.sqlite" ];
+    fetch = {
+      type = "stdio";
+      command = "${pkgs.mcp-server-fetch}/bin/mcp-server-fetch";
+    };
+    github = {
+      type = "http";
+      serverUrl = "https://api.githubcopilot.com/mcp/";
+      headers = {
+        Authorization = "Bearer secret-token";
+      };
     };
   };
-  supportedHomeHarnesses = [ "antigravity" "claude" "codex" "copilot" "gemini" "opencode" "pi" ];
 in
 {
-  imports = [
-    bikeshed.homeModules.agents
-  ];
+  imports = [ bikeshed.homeModules.agents ];
 
   bikeshed.agents = {
     enable = true;
     skills = {
       enable = true;
       entries = {
+        inherit (bikeshed.packages.${pkgs.system}.agentskills)
+          anthropic-skills
+          mattpocock-skills
+          ;
         local-skills = bikeshed.lib.agents.mkSkill pkgs {
           name = "local-skills";
-          version = "1.0.0";
+          version = "0.1.0";
           src = ./skills;
         };
       };
     };
-    harnesses = lib.genAttrs supportedHomeHarnesses (agent: {
+    harnesses = lib.genAttrs bikeshed.lib.agents.homeHarnesses (agent: {
       enable = true;
       linkSkills = true;
       memory = {
         enable = true;
         source = ./memories/${agent}.md;
       };
-      mcp = {
-        enable = true;
-        servers = mcpServers;
-      };
+      mcp.servers = mcpServers;
     });
   };
 }
 ```
 
-> **Tip:** If specific agents need custom adjustments (such as setting `package = null` for proprietary tools managed out-of-band), merge them on top of the generated set or combine with `lib.optionalAttrs`. For harnesses that require custom config directories or environment variables (such as `CLAUDE_CONFIG_DIR` for Claude), enable wrapper generation with `wrapper.enable = true` and provide `wrapper.executable` if the tool is installed outside of Nix.
-
 ---
 
-## Devenv Configuration
+## Devenv Project-Level Configuration
 
-To manage project-level development environment configurations for AI agents, use the `devenvModules.agents` module. It automatically manages MCP servers and project-specific skills, ensuring agents have access to local dev processes.
+In a repository with `devenv.nix`, use `bikeshed.devenvModules.agents` to inject MCP configurations and link custom skills.
 
-### Option Reference
-
-- `agents.mcp.enable`: Enables general MCP setup for the project.
-- `agents.mcp.servers`: Attribute set of MCP servers (writes to `.agents/mcp_config.json`).
-- `agents.skills.enable`: Enables linking skills for this devenv.
-- `agents.skills.entries`: Attribute set of paths to skill directories to assemble and link under `.agents/skills/`.
-- `agents.<agent>.enable`: Configures individual agent integration (`<agent>` corresponds to any identifier in `popularHarnesses`, e.g. `antigravity`, `claude`, `codex`, `copilot`, `gemini`, `opencode`, `pi`, `vscode`).
-- `agents.<agent>.mcp.enable`: Configures target-specific MCP setup (e.g. `.mcp.json` for Claude).
-- `agents.<agent>.mcp.servers`: MCP servers specific to the agent.
-- `agents.<agent>.linkSkills`: Symlinks the compiled skills into the agent's local config folder (e.g., `.claude/skills`).
-
----
-
-## Setting up Devenv with `bikeshed`
-
-### 1. Define inputs in `devenv.yaml`
-
-Configure `bikeshed` as an input in `devenv.yaml`:
-
-```yaml
-inputs:
-  nixpkgs:
-    url: github:cachix/devenv-nixpkgs/rolling
-  git-hooks:
-    url: github:cachix/git-hooks.nix
-    inputs:
-      nixpkgs:
-        follows: nixpkgs
-  bikeshed:
-    url: github:dszakallas/bikeshed
-    inputs:
-      nixpkgs:
-        follows: nixpkgs
-```
-
-### 2. Configure `devenv.nix` with an `agents` Profile
-
-To prevent resource-heavy tasks (like pulling remote skills or configuring MCP servers) from running in automated environments where they aren't needed (such as CI), declare the agents configuration inside a separate `agents` profile:
+### Example `devenv.nix` Configuration
 
 ```nix
-{ pkgs, lib, config, inputs, ... }@args:
-
+{ pkgs, lib, inputs, ... }:
 {
-  # Other general configuration (e.g. packages, git-hooks) goes here
+  imports = [ inputs.bikeshed.devenvModules.agents ];
 
-  # Declare the resource-isolated "agents" profile
-  profiles.agents.module = {
-    imports = [
-      inputs.bikeshed.devenvModules.agents
+  bikeshed.agents = {
+    enable = true;
+    skills = [
+      ./my-custom-skills
     ];
-
-    agents = let
-      commonLib = inputs.bikeshed.lib;
-      
-      # Define project-specific MCP servers
-      mcpServers = {
-        devenv = {
-          command = "devenv";
-          args = [ "mcp" ];
-          env = {
-            DEVENV_ROOT = config.devenv.root;
-          };
-        };
+    mcp.servers = {
+      memory = {
+        type = "stdio";
+        command = "${pkgs.mcp-server-memory}/bin/mcp-server-memory";
       };
-    in {
-      mcp = {
-        enable = true;
-        servers = mcpServers;
-      };
-      
-      skills = {
-        enable = true;
-        entries = {
-          # Package shared skills from bikeshed
-          shared = commonLib.agents.mkSkill pkgs {
-            name = "shared-skills";
-            version = "unstable";
-            src = inputs.bikeshed.outPath;
-            include = [ "devenv" ];
-          };
-        };
-      };
-
-      # Configure target-specific settings for the active agents.
-      # Recommended: dynamically configure all popular agent harnesses
-    }
-    // lib.genAttrs commonLib.agents.popularHarnesses (agent: {
-      enable = true;
-      mcp = {
-        enable = true;
-        servers = commonLib.agents.mcpServersForAgent agent mcpServers;
-      };
-    });
-  };
-}
-```
-
-> **Note:** Configuring agents dynamically with `commonLib.agents.popularHarnesses` (paired with `lib.genAttrs`) is recommended because it provides immediate coverage for all supported harnesses without repetitive declarations. Each agent's MCP servers are automatically transformed according to its own configuration schema.
-
-### 3. Entering the shell with the profile
-
-During local development, enter the shell with the `agents` profile enabled:
-
-```bash
-devenv shell -p agents
-```
-
-This isolates the setup tasks, ensuring that CI/automated builds (which run standard `devenv shell` or test tasks without the profile) will skip running unnecessary agent-setup scripts and hook evaluations.
-
----
-
-## Packaging Skills with `mkSkill`
-
-The `mkSkill` utility compiles one or more agent skills (either from local directories or remote repositories) into a Nix derivation so they can be symlinked into the agent's workspace or configuration path.
-
-### Function Signature
-
-```nix
-bikeshed.lib.agents.mkSkill pkgs {
-  name = "skill-name";
-  version = "1.0.0";
-  src = ./path-to-source;
-  sourceRoot = "subdir-if-nested";       # Optional, subdirectory within src to search
-  include = [ "specific-skill-folder" ]; # Optional, defaults to null (includes all)
-  exclude = [ "ignored-skill-folder" ];  # Optional, defaults to []
-  preserveSourceRoot = false;            # Optional, preserve all files in source root (plugin style)
-}
-```
-
-### Parameter Details
-
-- **`pkgs`**: The Nixpkgs package set used to run the build derivation.
-- **`name`**: The package/derivation name.
-- **`version`**: The version identifier of the skill set.
-- **`src`**: The source directory or derivation containing the skills.
-  - **Local Path**: You can supply a local directory path (e.g. `./skills` or `inputs.bikeshed.outPath`).
-  - **Remote Repository**: Since installing remote community skills is common, you can fetch skills directly from Git/GitHub using helpers like `pkgs.fetchFromGitHub` or `pkgs.fetchgit`.
-- **`sourceRoot`**: An optional subdirectory within `src` containing the skills or plugin files (e.g. `"plugins/my-plugin"`). If omitted, searches `src/skills` if it exists, otherwise the root of `src`.
-- **`include`**: An optional list of skill folder names to explicitly package. If `null`, all discovered skills are included.
-- **`exclude`**: An optional list of skill folder names to filter out of the derivation output.
-- **`preserveSourceRoot`**: An optional boolean (defaults to `false`). When `true`, preserves all files in the source root (such as plugin manifests, packages, agents, and hooks) in the output rather than copying only the discovered skill folders.
-
-### Behavioral and Directory Structure Rules
-
-1. **Root Search**: If the provided `src` directory has a subdirectory named `skills`, `mkSkill` will search within `src/skills`. Otherwise, it will search the root of `src`.
-2. **Skill Discovery**: The builder looks recursively for files named `SKILL.md`. Each directory containing a `SKILL.md` is considered a single, isolated skill unit named after the parent directory (or the derivation name if `SKILL.md` is in the search root).
-3. **Filtering**: If `include` or `exclude` are provided, the builder matches the subdirectory basenames against these list options to decide what gets copied.
-4. **Output Structure**: The resulting derivation packages each compiled skill directory, maintaining the layout so they can be automatically symlinked into agent-specific configuration paths (like `.claude/skills` or `.gemini/config/skills`).
-
-### Usage Example: Mixing Local and Remote Skills
-
-```nix
-bikeshed.agents.skills.entries = {
-  # Local custom workspace skills
-  local-project-skills = bikeshed.lib.agents.mkSkill pkgs {
-    name = "project-skills";
-    version = "1.0.0";
-    src = ./my-skills-dir;
-  };
-
-  # Remote Go-specific agent skills
-  cc-skills-golang = bikeshed.lib.agents.mkSkill pkgs {
-    name = "cc-skills-golang";
-    version = "2026-07-02";
-    src = pkgs.fetchFromGitHub {
-      owner = "samber";
-      repo = "cc-skills-golang";
-      rev = "8b2d019212d6a5390d472a7660a8489109d7db49";
-      hash = "sha256-oSFApXKBndeM1wsl6GyPwiDuIgt5bGXWzDtpnmC6SaM=";
     };
   };
-};
+}
 ```
-
----
-
-## Formatting MCP Server Configuration with `mcpServersForAgent`
-
-Since different AI agents use slightly different schemas for declaring HTTP and SSE MCP servers, the `mcpServersForAgent` helper formats standard server attributes for a specific agent.
-
-### Function Signature
-
-```nix
-bikeshed.lib.agents.mcpServersForAgent agentName genericMcpServers
-```
-
-### Server Type Conversions
-
-- **Gemini**: Automatically renames HTTP transport targets to `httpUrl` and SSE transport targets to `url`.
-- **Claude / Copilot**: Automatically normalizes HTTP and SSE targets to `url` while keeping `type`.
-- **Codex**: Formats MCP servers into TOML `mcp_servers` with `url` and `http_headers`.
-- **Validation**: Enforces fields like `command`, `args`, and `env` are only defined for `stdio` transports, and that `serverUrl` is defined for `http`/`sse` transports.
-
----
-
-## Dynamically Configuring Agents with `popularHarnesses`
-
-Bikeshed exports two harness lists from its agent library:
-
-- **`bikeshed.lib.agents.popularHarnesses`**: List of standard agent harnesses supported across bikeshed (`[ "antigravity" "claude" "codex" "copilot" "gemini" "opencode" "pi" "vscode" ]`).
-- **`bikeshed.lib.agents.allHarnesses`**: List of all configured harnesses (currently identical to `popularHarnesses`).
-
-### Why `popularHarnesses` is Recommended
-
-1. **Zero Boilerplate**: Avoids declaring repetitive configuration blocks for each individual agent harness in home-manager or devenv profiles.
-2. **Comprehensive Coverage**: Ensures that developers and team members using any supported agent harness (`claude`, `gemini`, `copilot`, `antigravity`, `opencode`, `codex`, `pi`, or `vscode`) automatically inherit the shared skills and project MCP servers.
-3. **Future Proofing**: As support for new harnesses is added to bikeshed, configurations relying on `popularHarnesses` pick them up automatically without manual adjustments.
-4. **Seamless Schema Adaptation**: When combined with `mcpServersForAgent agent genericMcpServers`, each agent's MCP servers are formatted to match its harness requirements (transport types, configuration file paths, and syntax).
