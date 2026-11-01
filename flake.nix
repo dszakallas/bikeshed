@@ -45,8 +45,8 @@ rec {
           pkgs = nixpkgs.legacyPackages.${system};
           skills = outputs.packages.${system}.agentskills;
         in
-        {
-          codebox = lib.agents.mkCodeboxImage pkgs {
+        rec {
+          paseo-sandbox = lib.agents.mkPaseoSandboxImage pkgs {
             paseo = outputs.packages.${system}.paseo;
             modules = [
               outputs.homeModules.base
@@ -72,6 +72,7 @@ rec {
               harnesses.opencode.enable = true;
             };
           };
+          codebox = paseo-sandbox;
         }
       );
       outputs =

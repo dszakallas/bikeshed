@@ -1,12 +1,12 @@
 # Agents library (`lib/agents`)
 
-This directory provides tools and data structures to manage AI agent configurations, skills, memory prompts, and Model
+This directory provides tools to manage AI agent configurations, skills, memory prompts, and Model
 Context Protocol (MCP) servers across desktop workstations and container sandboxes.
 
-## What can be achieved with it
+## Motivation
 
-This library unifies AI developer tooling across both desktop workstations running Home-Manager and containerized
-sandboxes created with `mkCodeboxImage`:
+This library unifies AI developer tooling across both developer workstations running Home-Manager and
+containerized sandboxes:
 
 - Configure multiple agent CLIs (Claude Code, OpenCode, Gemini CLI, GitHub Copilot, Codex, Pi, VS Code) from one place.
 - Share common skill packages and memory instruction prompts across all tools without duplicating files.
@@ -60,6 +60,21 @@ Each instance under `bikeshed.agents.harnesses` configures a distinct agent tool
 | `mcp.target` | path or null | harness default | Target configuration file relative to `$HOME`. |
 | `settings.target` | path or null | harness default | Target configuration file for settings entries. |
 | `settings.entries` | attrs of settingEntry | `{}` | Dotted-path values patched into the configuration file. |
+
+### Supported harnesses
+
+The following agent harnesses are defined in `lib/agents/harnesses`:
+
+| Harness | Definition | Home-Manager | Default user directory | Default MCP target |
+| --- | --- | --- | --- | --- |
+| `antigravity` | [antigravity.nix](harnesses/antigravity.nix) | Yes | `.gemini/antigravity-cli` | — |
+| `claude` | [claude.nix](harnesses/claude.nix) | Yes | `.claude` | `.claude/.claude.json` |
+| `codex` | [codex.nix](harnesses/codex.nix) | Yes | `.codex` | `.codex/config.toml` |
+| `copilot` | [copilot.nix](harnesses/copilot.nix) | Yes | `.copilot` | `.copilot/mcp-config.json` |
+| `gemini` | [gemini.nix](harnesses/gemini.nix) | Yes | `.gemini` | `.gemini/settings.json` |
+| `opencode` | [opencode.nix](harnesses/opencode.nix) | Yes | `.config/opencode` | `.config/opencode/opencode.json` |
+| `pi` | [pi.nix](harnesses/pi.nix) | Yes | `.pi/agent` | `.pi/agent/mcp.json` |
+| `vscode` | [vscode.nix](harnesses/vscode.nix) | No (project-only) | — | `.vscode/mcp.json` |
 
 ### Home-Manager configuration example
 
@@ -232,13 +247,13 @@ spec:
           CLAUDE_CONFIG_DIR: $HOME/.claude-dev
 ```
 
-## Codebox container images (`mkCodeboxImage`)
+## Paseo sandbox container images (`mkPaseoSandboxImage`)
 
-`agents.mkCodeboxImage` builds a container image containing `paseo-server`, development utilities, and agent tools.
+`agents.mkPaseoSandboxImage` builds a container image containing `paseo-server`, development utilities, and agent tools.
 
 ```nix
-agents.mkCodeboxImage pkgs {
-  name = "codebox";
+agents.mkPaseoSandboxImage pkgs {
+  name = "paseo-sandbox";
   tag = "latest";
   paseo = packages.paseo;
   agents = {
@@ -259,7 +274,7 @@ files into `/etc/bikeshed/agents/init`:
 docker run -d \
   -v /path/to/my-overrides:/etc/bikeshed/agents/init:ro \
   -v workspace:/workspace \
-  codebox:latest
+  paseo-sandbox:latest
 ```
 
 ## MCP server protocol translation
@@ -345,4 +360,5 @@ The `ctx.lib.agents` attribute set exports the following functions and values:
 | `mkActivateAgentConfiguration` | Derivation providing the `activate-agent-configuration` executable. |
 | `mkCodeboxInit` | Backward-compatibility alias for `mkActivateAgentConfiguration`. |
 | `mkConfigMerge` | Derivation providing `bikeshed-config-merge` for JSON and TOML path patching. |
-| `mkCodeboxImage` | Builds a Docker container image with Paseo server and configured agent tools. |
+| `mkPaseoSandboxImage` | Builds a Docker container image with Paseo server and configured agent tools. |
+| `mkCodeboxImage` | Backward-compatibility alias for `mkPaseoSandboxImage`. |

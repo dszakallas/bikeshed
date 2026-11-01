@@ -146,11 +146,13 @@ let
       ;
   };
 
-  mkCodeboxImage = import ./codebox.nix {
+  mkPaseoSandboxImage = import ./paseo-sandbox.nix {
     inherit lib harnessConfig assembleSkills;
     home-manager = ctx.home-manager or null;
     inherit ctx;
   };
+
+  mkCodeboxImage = mkPaseoSandboxImage;
 
   allHarnesses = popularHarnesses;
 
@@ -216,6 +218,7 @@ in
       mcpServersForAgent
       memory
       mkCodeboxImage
+      mkPaseoSandboxImage
       mkSkill
       popularHarnesses
       ;
