@@ -378,11 +378,8 @@ The `ctx.lib.agents` attribute set exports the following functions and values:
 | `mcpServersForAgent` | Converts generic MCP server definitions into a target agent's schema. |
 | `mkSkill` | Builds a skill derivation from a source directory containing `SKILL.md`. |
 | `assembleSkills` | Derivation combining multiple skill paths into a single unified directory. |
-| `assembleSkillsText` | Bash script used by `assembleSkills` to link skill directories. |
 | `mkBaseSpec` | Evaluates module options into an `AgentConfig` attribute set. |
 | `mkBaseYaml` | Builds the base `00-base.yaml` store derivation from an `AgentConfig` attribute set. |
 | `mkActivateAgentConfiguration` | Derivation providing the `activate-agent-configuration` executable. |
-| `mkCodeboxInit` | Backward-compatibility alias for `mkActivateAgentConfiguration`. |
 | `mkConfigMerge` | Derivation providing `bikeshed-config-merge` for JSON and TOML path patching. |
 | `mkPaseoSandboxImage` | Builds a Docker container image with Paseo server and configured agent tools. |
-| `mkCodeboxImage` | Backward-compatibility alias for `mkPaseoSandboxImage`. |
