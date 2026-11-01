@@ -47,7 +47,6 @@ rec {
         in
         rec {
           paseo-sandbox = lib.agents.mkPaseoSandboxImage pkgs {
-            paseo = outputs.packages.${system}.paseo;
             modules = [
               outputs.homeModules.base
               outputs.homeModules.agents

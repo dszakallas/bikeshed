@@ -7,7 +7,9 @@ pkgs:
 {
   name ? "paseo-sandbox",
   tag ? null,
-  paseo,
+  paseo ?
+    ctx.packages.${pkgs.stdenv.hostPlatform.system}.paseo
+      or (throw "mkPaseoSandboxImage: paseo package must be specified or available in ctx.packages"),
   extraPackages ? [ ],
   user ? "coder",
   uid ? 10001,
