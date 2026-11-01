@@ -43,18 +43,22 @@ Each instance under `bikeshed.agents.harnesses` configures a distinct agent tool
 | `enable` | boolean | `true` | Enables this harness instance. |
 | `harness` | string | `<name>` | Base harness type (e.g. `"claude"`, `"gemini"`, `"opencode"`). |
 | `package` | package or null | harness default | Package providing the CLI tool. |
+| `binary` | string or null | `null` | Binary name to execute. Defaults to package mainProgram or harness name. |
+| `env` | attrs of string | `{}` | Additional environment variables set in the harness wrapper script. |
 | `userDirectory` | path | harness default | State and configuration directory relative to `$HOME`. |
 | `linkSkills` | boolean | harness default | Symlinks shared skills into the harness skill directory. |
 | `skillsDirectory` | path | harness default | Destination path for linked skills. |
 | `memory.enable` | boolean | `false` | Links memory instruction files into the harness memory directory. |
 | `memory.directory` | path | harness default | Destination path for memory files. |
-| `memory.entries` | attrs of (path or string) | `{}` | Memory instruction files. |
-| `wrapper.enable` | boolean | harness default | Generates an executable launcher script in `wrappersDirectory`. |
+| `memory.target` | string | harness default | File name of the main memory file inside the memory directory. |
+| `memory.source` | path or null | `null` | Path to the source file for the main memory file. |
+| `memory.content` | string or null | `null` | Raw text content of the main memory file. |
+| `wrapper.enable` | boolean | `true` | Generates an executable launcher script in `wrappersDirectory`. |
+| `wrapper.name` | string | `<name>` | Executable name of the wrapper script in `wrappersDirectory`. |
 | `wrapper.executable` | string or null | `null` | Target executable path or binary name. |
 | `wrapper.sessionVariables` | attrs of string | `{}` | Environment variables exported by the wrapper script. |
 | `wrapper.initExtra` | string | `""` | Shell commands run before launching the target executable. |
 | `wrapper.args` | list of strings | `[]` | Default arguments appended to executable invocations. |
-| `mcp.enable` | boolean | `true` | Manages MCP servers in the harness configuration file. |
 | `mcp.servers` | attrs of mcpServer | `{}` | Generic MCP server definitions. |
 | `mcp.strategy` | `"merge"` or `"replace"` | `"merge"` | Merge strategy for top-level MCP keys. |
 | `mcp.target` | path or null | harness default | Target configuration file relative to `$HOME`. |

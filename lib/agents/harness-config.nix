@@ -82,6 +82,11 @@ let
               default = null;
               description = "Target executable path or binary name.";
             };
+            sessionVariables = mkOption {
+              type = types.attrsOf types.str;
+              default = { };
+              description = "Environment variables exported by the wrapper script.";
+            };
             initExtra = mkOption {
               type = types.lines;
               default = "";
@@ -309,7 +314,8 @@ let
         lib.mapAttrs (
           _: lib.replaceStrings [ "$HOME/${hc.defaultUserDirectory}" ] [ "$HOME/${cfg.userDirectory}" ]
         ) (hc.sessionVariables or { })
-        // cfg.env;
+        // cfg.env
+        // cfg.wrapper.sessionVariables;
     in
     {
       packages = lib.optional (cfg.package != null) cfg.package;
