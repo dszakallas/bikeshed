@@ -6,7 +6,7 @@
 pkgs:
 {
   name ? "paseo-sandbox",
-  tag ? "0.1.0",
+  tag ? null,
   paseo,
   extraPackages ? [ ],
   user ? "coder",
