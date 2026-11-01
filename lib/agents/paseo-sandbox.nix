@@ -152,7 +152,7 @@ dockerTools.buildLayeredImage {
       "NIX_PATH=nixpkgs=channel:nixos-unstable"
       "SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
       "NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
-      "PASEO_HOME=${home}/.paseo"
+      "PASEO_HOME=${home}"
       "PASEO_LISTEN=0.0.0.0:6767"
       "PASEO_WEB_UI_ENABLED=true"
       "PASEO_LOG_FORMAT=json"
