@@ -76,14 +76,6 @@ in
         comment-char = ''"'';
         content = builtins.readFile ./vimrc;
       };
-      # in some shell scripts, alias doesn't work, so we use a wrapper script
-      file.".bikeshed/bin/docker" = {
-        text = ''
-          #!/bin/sh
-          exec podman "$@"
-        '';
-        executable = true;
-      };
       sessionVariables = {
         EDITOR = "vim";
         LANG = "en_US.UTF-8";
@@ -91,7 +83,6 @@ in
       shellAliases = {
         la = "ls -la";
         v = "vim";
-        docker = "podman";
       };
     };
     programs = {
