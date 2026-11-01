@@ -117,16 +117,6 @@ while IFS= read -r name; do
   target_binary=$(hq '.wrapper.binary // .binary // .harness // empty')
   if [ -z "$target_binary" ]; then target_binary="$name"; fi
 
-  if [[ "$target_binary" == /* ]]; then
-    if [ ! -x "$target_binary" ]; then
-      log "harness $name is enabled but '$target_binary' is not executable"
-    fi
-  else
-    if ! command -v "$target_binary" >/dev/null; then
-      log "harness $name is enabled but '$target_binary' is not installed in this image"
-    fi
-  fi
-
   if [ "$skills_enabled" = true ] && [ "$(hq '.linkSkills // false')" = true ]; then
     skills_dir=$(hq '.skillsDirectory // empty')
     if [ -n "$skills_dir" ]; then link_skills "$skills_dir"; fi
@@ -253,7 +243,7 @@ if [ -d "$abs_wrappers" ]; then
   done
 fi
 
-# Drop links left dangling by an earlier image version.
+# Drop links left dangling by an earlier version.
 for d in "${prune_dirs[@]}"; do
   if [ -d "$d" ]; then find "$d" -maxdepth 1 -xtype l -delete; fi
 done
