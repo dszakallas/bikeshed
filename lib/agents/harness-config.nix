@@ -44,14 +44,9 @@ let
       in
       {
         options = {
-          type = mkOption {
-            type = types.nullOr (types.enum configurableNames);
-            default = null;
-            description = "Alias for harness.";
-          };
           harness = mkOption {
             type = types.enum configurableNames;
-            default = if config.type != null then config.type else name;
+            default = name;
             description = "Which known agent harness this instance configures. Defaults to the instance name.";
           };
           enable = mkEnableOption "this agent harness instance";
