@@ -1,7 +1,5 @@
 {
   lib,
-  harnessConfig,
-  assembleSkills,
   home-manager ? null,
   ctx ? { },
 }:
@@ -9,7 +7,6 @@ pkgs:
 {
   name ? "paseo-sandbox",
   tag ? "0.1.0",
-  agents ? { },
   paseo,
   extraPackages ? [ ],
   user ? "coder",
@@ -42,33 +39,16 @@ let
     }
     // extraSpecialArgs;
     modules = [
-      (import ../../modules/home/agents ctx)
       {
         home = {
           username = user;
           homeDirectory = home;
           stateVersion = "25.05";
         };
-        bikeshed.agents = {
-          # Declare every known harness with its defaults. Instances stay
-          # disabled unless the caller (or a mounted initializer) enables them.
-          harnesses = lib.genAttrs harnessConfig.configurableNames (_: { });
-          skills.enable = lib.mkDefault true;
-          init.overridesDir = lib.mkDefault "/etc/bikeshed/agents/init:.config/bikeshed/agents/init";
-        };
       }
-      (lib.optionalAttrs (agents != { }) {
-        bikeshed.agents = agents;
-      })
     ]
     ++ modules;
   };
-
-  cfg = homeConfig.config.bikeshed.agents;
-
-  plans = lib.mapAttrs (_: harnessConfig.mkHarnessPlan pkgs) cfg.harnesses;
-  enabledInstances = lib.filterAttrs (n: _: cfg.harnesses.${n}.enable) cfg.harnesses;
-  enabledPlans = lib.filterAttrs (n: _: enabledInstances ? ${n}) plans;
 
   shell =
     if homeConfig.config.programs.zsh.enable then
@@ -96,10 +76,6 @@ let
     ln -s ${entrypointScript}/bin/paseo-sandbox-entrypoint $out/bin/paseo-sandbox-entrypoint
     ln -s ${entrypointScript}/bin/paseo-sandbox-entrypoint $out/bin/codebox-entrypoint
   '';
-
-  sessionVariables = lib.concatMapAttrs (
-    _: plan: lib.mapAttrs (_: lib.replaceStrings [ "$HOME" ] [ home ]) plan.sessionVariables
-  ) enabledPlans;
 in
 dockerTools.buildLayeredImage {
   includeNixDB = true;
@@ -185,8 +161,7 @@ dockerTools.buildLayeredImage {
       "PASEO_DICTATION_ENABLED=false"
       "PASEO_VOICE_MODE_ENABLED=false"
     ]
-    ++ lib.mapAttrsToList (k: v: "${k}=${v}") homeConfig.config.home.sessionVariables
-    ++ lib.mapAttrsToList (k: v: "${k}=${v}") sessionVariables;
+    ++ lib.mapAttrsToList (k: v: "${k}=${v}") homeConfig.config.home.sessionVariables;
     ExposedPorts = {
       "6767/tcp" = { };
     };

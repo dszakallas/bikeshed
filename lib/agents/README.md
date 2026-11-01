@@ -256,11 +256,18 @@ agents.mkPaseoSandboxImage pkgs {
   name = "paseo-sandbox";
   tag = "latest";
   paseo = packages.paseo;
-  agents = {
-    skills.entries = { inherit (skills) git-operator; };
-    harnesses.claude = { };
-    harnesses.opencode = { };
-  };
+  modules = [
+    homeModules.base
+    homeModules.agents
+    {
+      bikeshed.agents = {
+        enable = true;
+        skills.entries = { inherit (skills) git-operator; };
+        harnesses.claude = { };
+        harnesses.opencode = { };
+      };
+    }
+  ];
 }
 ```
 

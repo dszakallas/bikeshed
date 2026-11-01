@@ -147,7 +147,7 @@ let
   };
 
   mkPaseoSandboxImage = import ./paseo-sandbox.nix {
-    inherit lib harnessConfig assembleSkills;
+    inherit lib;
     home-manager = ctx.home-manager or null;
     inherit ctx;
   };

@@ -50,6 +50,7 @@ rec {
             paseo = outputs.packages.${system}.paseo;
             modules = [
               outputs.homeModules.base
+              outputs.homeModules.agents
               {
                 home.packages = with pkgs; [
                   bzip2
@@ -62,15 +63,17 @@ rec {
                   procps
                   xz
                 ];
+                bikeshed.agents = {
+                  enable = true;
+                  skills.enable = true;
+                  skills.entries = {
+                    anthropic-skills = skills.anthropic-skills;
+                    mattpocock-skills = skills.mattpocock-skills;
+                  };
+                  harnesses.opencode.enable = true;
+                };
               }
             ];
-            agents = {
-              skills.entries = {
-                anthropic-skills = skills.anthropic-skills;
-                mattpocock-skills = skills.mattpocock-skills;
-              };
-              harnesses.opencode.enable = true;
-            };
           };
           codebox = paseo-sandbox;
         }

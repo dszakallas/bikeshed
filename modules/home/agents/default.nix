@@ -29,6 +29,12 @@ in
   // agentsLib.agentsOptions pkgs;
 
   config = mkIf cfg.enable {
+    bikeshed.agents = {
+      harnesses = lib.mkDefault (lib.genAttrs agentsLib.homeHarnesses (_: { }));
+      skills.enable = lib.mkDefault true;
+      init.overridesDir = lib.mkDefault "/etc/bikeshed/agents/init:.config/bikeshed/agents/init";
+    };
+
     home.packages = lib.concatMap (plan: plan.packages) (lib.attrValues plans) ++ [
       agentConfigActivation
     ];
