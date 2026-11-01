@@ -46,22 +46,12 @@ rec {
           skills = outputs.packages.${system}.agentskills;
         in
         rec {
-          paseo-sandbox = lib.agents.mkPaseoSandboxImage pkgs {
+          paseo-sandbox-example = lib.agents.mkPaseoSandboxImage pkgs {
+            name = "paseo-sandbox-example";
             modules = [
               outputs.homeModules.base
               outputs.homeModules.agents
               {
-                home.packages = with pkgs; [
-                  bzip2
-                  curl
-                  devenv
-                  gnugrep
-                  gnutar
-                  gzip
-                  lbzip2
-                  procps
-                  xz
-                ];
                 bikeshed.agents = {
                   enable = true;
                   skills.enable = true;
@@ -69,12 +59,12 @@ rec {
                     anthropic-skills = skills.anthropic-skills;
                     mattpocock-skills = skills.mattpocock-skills;
                   };
+                  # install OpenCode
                   harnesses.opencode.enable = true;
                 };
               }
             ];
           };
-          codebox = paseo-sandbox;
         }
       );
       outputs =

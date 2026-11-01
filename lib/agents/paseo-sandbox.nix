@@ -76,7 +76,6 @@ let
   entrypoint = pkgs.runCommand "paseo-sandbox-entrypoint-wrapper" { } ''
     mkdir -p $out/bin
     ln -s ${entrypointScript}/bin/paseo-sandbox-entrypoint $out/bin/paseo-sandbox-entrypoint
-    ln -s ${entrypointScript}/bin/paseo-sandbox-entrypoint $out/bin/codebox-entrypoint
   '';
 in
 dockerTools.buildLayeredImage {
@@ -156,7 +155,7 @@ dockerTools.buildLayeredImage {
       "NIX_SSL_CERT_FILE=/etc/ssl/certs/ca-bundle.crt"
       "PASEO_HOME=${home}/paseo"
       "PASEO_LISTEN=0.0.0.0:6767"
-      "PASEO_WEB_UI_ENABLED=true"
+      "PASEO_WEB_UI_ENABLED=false"
       "PASEO_LOG_FORMAT=json"
       "PASEO_LOG_LEVEL=info"
       # Skip the local speech model download.

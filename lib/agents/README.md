@@ -247,41 +247,59 @@ spec:
           CLAUDE_CONFIG_DIR: $HOME/.claude-dev
 ```
 
-## Paseo sandbox container images (`mkPaseoSandboxImage`)
+## Agent sandbox container images
 
-`agents.mkPaseoSandboxImage` builds a container image containing `paseo-server`, development utilities, and agent tools.
+We provide experimental tooling to build container images for agentic development.
+
+### Paseo sandbox image (Experimental)
+
+I am currently using the open source [paseo](https://paseo.sh) tool for agent orchestration as it supports multiple
+harnesses such as Claude, Codex, and OpenCode, which fits my workflow.
+
+`agents.mkPaseoSandboxImage` builds a container image containing `paseo-server` for agentic development. It uses
+home-manager to configure the sandbox. By default, it just installs the `paseo` package with some configuration, you
+will need to add the actual agent harnesses, skills, mcp servers, packages, etc. you want your agents to use in the container.
+
+Just add any home-manager modules you want to the `modules` list, and the resulting image
+will contain all the configured packages and tools.
 
 ```nix
 agents.mkPaseoSandboxImage pkgs {
-  name = "paseo-sandbox";
+  name = "paseo-sandbox-example";
   tag = "latest";
-  paseo = packages.paseo;
   modules = [
-    homeModules.base
-    homeModules.agents
+    outputs.homeModules.base
+    outputs.homeModules.agents
     {
       bikeshed.agents = {
         enable = true;
-        skills.entries = { inherit (skills) git-operator; };
-        harnesses.claude = { };
-        harnesses.opencode = { };
+        skills.enable = true;
+        skills.entries = {
+          anthropic-skills = outputs.packages.${system}.agentskills.anthropic-skills;
+          mattpocock-skills = outputs.packages.${system}.agentskills.mattpocock-skills;
+        };
+        # install OpenCode
+        harnesses.opencode.enable = true;
       };
     }
   ];
 }
 ```
 
-The container entrypoint executes the Home-Manager activation package (`${homeConfig.activationPackage}/activate`),
-which runs `activate-agent-configuration`.
+The container entrypoint executes the Home-Manager activation package when the container starts.
 
-To configure credentials or custom servers when starting a container, mount a directory containing override YAML
-files into `/etc/bikeshed/agents/init`:
+The above example imports the agents home module (`outputs.homeModules.agents`), and uses it to set up some skills
+and OpenCode, just like you would use it on your local machine.
+If you want custom overrides for your agents, you can mount a directory containing override
+YAML files into `/etc/bikeshed/agents/init`:
 
 ```bash
 docker run -d \
   -v /path/to/my-overrides:/etc/bikeshed/agents/init:ro \
-  paseo-sandbox:latest
+  paseo-sandbox-example:latest
 ```
+
+This way you can pass dynamic configuration to your agents without rebuilding the container image.
 
 ## MCP server protocol translation
 
