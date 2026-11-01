@@ -44,9 +44,14 @@ let
       in
       {
         options = {
+          type = mkOption {
+            type = types.nullOr (types.enum configurableNames);
+            default = null;
+            description = "Alias for harness.";
+          };
           harness = mkOption {
             type = types.enum configurableNames;
-            default = name;
+            default = if config.type != null then config.type else name;
             description = "Which known agent harness this instance configures. Defaults to the instance name.";
           };
           enable = mkEnableOption "this agent harness instance";
@@ -76,6 +81,16 @@ let
               type = types.str;
               default = name;
               description = "Name of the wrapper script executable. Defaults to the instance name.";
+            };
+            executable = mkOption {
+              type = types.nullOr types.str;
+              default = null;
+              description = "Target executable path or binary name.";
+            };
+            initExtra = mkOption {
+              type = types.lines;
+              default = "";
+              description = "Shell commands run before launching the target executable.";
             };
             args = mkOption {
               type = types.listOf types.str;
@@ -280,14 +295,18 @@ let
       hc = homeConfigurationOf cfg.harness;
       nativeServers = mcpServersForAgent cfg.harness cfg.mcp.servers;
       binaryName =
-        if cfg.binary != null then
+        if cfg.wrapper.executable != null then
+          cfg.wrapper.executable
+        else if cfg.binary != null then
           cfg.binary
         else if cfg.package != null then
           cfg.package.meta.mainProgram or cfg.harness
         else
           hc.defaultBinary or cfg.harness;
       binaryPath =
-        if cfg.package != null && binaryName != null then
+        if binaryName != null && lib.hasPrefix "/" binaryName then
+          binaryName
+        else if cfg.package != null && binaryName != null then
           "${cfg.package}/bin/${binaryName}"
         else
           binaryName;
@@ -363,6 +382,9 @@ let
               inherit (h.wrapper) enable name args;
               binary = plan.binaryPath;
               sessionVariables = plan.sessionVariables;
+            }
+            // lib.optionalAttrs (h.wrapper.initExtra != "") {
+              inherit (h.wrapper) initExtra;
             };
             memory = {
               inherit (h.memory) enable directory target;
