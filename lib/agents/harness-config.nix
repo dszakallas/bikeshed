@@ -346,7 +346,7 @@ let
     in
     {
       apiVersion = "bikeshed.szakallas.net/v1alpha1";
-      kind = "CodeboxInit";
+      kind = "AgentConfig";
       metadata.name = "base";
       spec = {
         inherit (cfg) wrappersDirectory;
@@ -430,30 +430,39 @@ let
       text = builtins.readFile ./config-merge.sh;
     };
 
-  # Applies the CodeboxInit documents to $HOME.
-  mkCodeboxInit =
+  # Applies the AgentConfig documents to $HOME.
+  mkActivateAgentConfiguration =
     pkgs: args:
     let
       actualArgs = if args == null then { } else args;
       baseSpec = actualArgs.baseSpec or null;
       overridesDir = actualArgs.overridesDir or null;
-    in
-    pkgs.writeShellApplication {
-      name = "codebox-init";
-      runtimeInputs = [
-        pkgs.coreutils
-        pkgs.findutils
-        pkgs.gnugrep
-        pkgs.jq
-        pkgs.yq-go
-        (mkConfigMerge pkgs)
-      ];
-      runtimeEnv = lib.filterAttrs (_: v: v != null) {
-        BIKESHED_AGENTS_BASE_SPEC = if baseSpec != null then toString baseSpec else null;
-        BIKESHED_AGENTS_OVERRIDES_DIR = if overridesDir != null then toString overridesDir else null;
+      app = pkgs.writeShellApplication {
+        name = "activate-agent-configuration";
+        runtimeInputs = [
+          pkgs.coreutils
+          pkgs.findutils
+          pkgs.gnugrep
+          pkgs.jq
+          pkgs.yq-go
+          (mkConfigMerge pkgs)
+        ];
+        runtimeEnv = lib.filterAttrs (_: v: v != null) {
+          BIKESHED_AGENTS_BASE_SPEC = if baseSpec != null then toString baseSpec else null;
+          BIKESHED_AGENTS_OVERRIDES_DIR = if overridesDir != null then toString overridesDir else null;
+        };
+        text = builtins.readFile ./activate-agent-configuration.sh;
       };
-      text = builtins.readFile ./codebox-init.sh;
-    };
+    in
+    pkgs.runCommand "activate-agent-configuration" { } ''
+      mkdir -p $out/bin
+      for b in ${app}/bin/*; do
+        ln -s "$b" $out/bin/
+      done
+      ln -s $out/bin/activate-agent-configuration $out/bin/codebox-init
+    '';
+
+  mkCodeboxInit = mkActivateAgentConfiguration;
 in
 {
   inherit
@@ -462,6 +471,7 @@ in
     configurableNames
     harnessType
     homeConfigurationOf
+    mkActivateAgentConfiguration
     mkBaseSpec
     mkBaseYaml
     mkCodeboxInit

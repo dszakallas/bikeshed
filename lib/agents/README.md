@@ -109,41 +109,6 @@ Given an existing `~/.claude/.claude.json` and a managed set that redefines `gle
 
 ---
 
-## Other Agents Library Exports
-
-- `agents.harnesses`: Attribute set of harness specifications, each defining `description`,
-  `mcpKey`, `wrapMcpServers`, `transformMcpServerSpec`, optionally `homeConfiguration`
-  (`defaultPackage` function taking `pkgs`, `defaultUserDirectory`, `defaultMemoryDirectory`,
-  `defaultMemoryFile`, `defaultLinkSkills`, `defaultWrapper`, etc.), and optionally `projectConfiguration`
-  (`defaultLinkSkills`, `defaultSkillsDirectory`, `defaultMcpTarget`).
-- `agents.mcpServerType`: Submodule option type for an individual generic MCP server
-  definition (`type`, `command`, `args`, `env`, `serverUrl`, `headers`).
-- `agents.mcpServersType`: Attribute set option type (`attrsOf mcpServerType`) for declaring generic MCP servers.
-- `agents.mcpServersForAgent`: Formats generic MCP server declarations for a specific agent harness.
-  Throws an error if the agent harness is not recognized or does not define MCP server configuration.
-- `agents.popularHarnesses`: List of popular agent harness identifiers configured across bikeshed:
-  `[ "antigravity" "claude" "codex" "copilot" "gemini" "opencode" "pi" "vscode" ]`.
-- `agents.homeHarnesses`: Harnesses with a home configuration (those usable as `harnesses.<name>`).
-- `agents.allHarnesses`: List of all agent harness identifiers bikeshed can configure (currently identical to `popularHarnesses`).
-- `agents.memory`: Provides standard agent prompt fragments (`audiences`, `avoidTropes`, `codingWorkflow`, `machineUse`).
-- `agents.mkSkill pkgs { name, version, src, sourceRoot ? null, include ? null, ... }`: Creates a derivation
-  containing skills found in directories with a `SKILL.md` file.
-  - `pkgs`: Package set providing `stdenvNoCC` and `yq-go`.
-  - `name`: Derivation name (`pname`).
-  - `version`: Derivation version.
-  - `src`: Source directory containing skills.
-  - `sourceRoot`: Optional subdirectory within `src` to search (formerly `subDir`). Defaults to `"skills"` if it
-    exists, otherwise the root of `src`.
-  - `include`: Optional list of skill names to include. If `null` or omitted, all discovered skills are included.
-  - `exclude`: Optional list of skill names to exclude.
-  - `preserveSourceRoot`: Optional boolean (default `false`). When `true`, preserves all files in the source root
-    rather than copying only discovered skill folders.
-- `agents.assembleSkills`: Helper derivation to assemble skills from an attribute set or
-  list of skill paths into a single derivation containing all discovered skills.
-- `agents.assembleSkillsText`: The raw bash script text executed by `agents.assembleSkills`.
-
----
-
 ## Settings (`bikeshed.agents.harnesses.<name>.settings`)
 
 `settings.entries` sets arbitrary values (e.g. provider configuration) in the harness config file, keyed by a
@@ -166,32 +131,53 @@ harnesses.opencode.settings.entries = {
 };
 ```
 
-In a `CodeboxInit` file the same entries live under `spec.harnesses.<name>.settings.entries`, so a mounted file can
-add a provider at container start. Path components cannot contain dots.
+In an `AgentConfig` file the same entries live under `spec.harnesses.<name>.settings.entries`, so an override file
+can configure a model or provider at container startup or during home-manager activation.
 
 ---
 
-## Initializer and activation (`codebox-init`)
+## Agent Configuration Specification (`AgentConfig`)
 
-The `homeModules.agents` module unifies local activation and container startup through `codebox-init`
-(`agents.mkCodeboxInit`). The module compiles a base `CodeboxInit` document into the Nix store (`agents.mkBaseYaml`)
-and runs `codebox-init` during home-manager activation, merging the base spec with unmanaged user YAML overrides found
-in `init.overridesDir` (default `.config/bikeshed/agents/init` for home-manager, or
-`/etc/bikeshed/agents/init:.config/bikeshed/agents/init` in codebox containers).
+Agent configuration across both desktop Home-Manager environments and container sandboxes is unified through the
+`AgentConfig` specification (`apiVersion: bikeshed.szakallas.net/v1alpha1`, `kind: AgentConfig`), with a schema
+defined in `lib/agents/agent-config.schema.json`.
 
-`codebox-init`:
+### Rationale
 
-1. reads the base YAML from `/nix/store` and any `*.yaml`/`*.yml` override files in order, rejecting files that are
-   not `apiVersion: bikeshed.szakallas.net/v1alpha1`, `kind: CodeboxInit`;
-2. deep-merges them (maps merge, arrays and scalars are replaced by later files);
-3. creates wrapper scripts in `wrappersDirectory` (default `.bikeshed/bin`) for enabled harnesses, injecting each
-   instance's `sessionVariables` (e.g. `CLAUDE_CONFIG_DIR`) and executing the target binary;
-4. links skills and memory files and merges MCP servers and settings for every harness with `enable: true`;
-5. deletes dangling symlinks in managed directories and old wrapper scripts for disabled harnesses.
+1. **Shared Declarative Format**: Agent harnesses (such as Claude Code, OpenCode, and Gemini) frequently write
+   runtime state, session tokens, and local cache entries into their own configuration files. Symlinking these files
+   directly from the immutable `/nix/store` renders them read-only and causes agent runtime errors. By representing
+   desired configurations as `AgentConfig` documents, Home-Manager and container sandboxes use the exact same
+   underlying declarative pipeline.
+2. **Unmanaged Runtime Overrides**: While base configurations are compiled at build time into the Nix store
+   (`agents.mkBaseYaml`), users often need local, unmanaged overrides (e.g. secret API tokens, ad-hoc harness flags,
+   or testing a different provider). In Docker/Podman containers, mounting a volume over
+   `/etc/bikeshed/agents/init` makes customization trivial without rebuilding image layers. On host systems, files
+   placed in `~/.config/bikeshed/agents/init` provide the same capability.
+3. **Deep-Merge Semantics**: Multiple YAML documents are merged in lexical order using YAML deep-merge: map keys are
+   recursively merged, while scalar values and lists from later documents replace earlier declarations.
+4. **Isolated Wrapper Scripts**: Distinct harness instances (e.g. `claude` and `claude-qwen`) cannot safely share a
+   single global environment variable (like `CLAUDE_CONFIG_DIR`). The activation step emits standalone executable
+   wrappers in `wrappersDirectory` (`.bikeshed/bin`), exporting instance-specific session variables and flags when
+   the harness is executed.
+
+### Activation Mechanics (`activate-agent-configuration`)
+
+The `activate-agent-configuration` script (also aliased as `codebox-init`):
+
+1. Reads the base `AgentConfig` specification from `/nix/store` and any override documents found in
+   `init.overridesDir` (default `.config/bikeshed/agents/init` for home-manager, or
+   `/etc/bikeshed/agents/init:.config/bikeshed/agents/init` in codebox containers);
+2. Deep-merges the specifications into a unified configuration tree;
+3. Generates wrapper executables in `wrappersDirectory` (`.bikeshed/bin`) for enabled harnesses, injecting
+   configured `sessionVariables`, optional `initExtra` bash snippets, and target arguments;
+4. Symlinks agent skills and memory files into their respective target directories;
+5. Merges MCP servers and settings entries into target JSON and TOML configuration files using `bikeshed-config-merge`;
+6. Prunes dangling symlinks and removes wrapper scripts left by harnesses that are no longer enabled.
 
 ---
 
-## Codebox images (`agents.mkCodeboxImage`)
+## Codebox Images (`agents.mkCodeboxImage`)
 
 `agents.mkCodeboxImage pkgs { agents = { skills = …; harnesses.<name> = …; }; … }` builds a Docker image that
 runs `paseo-server` with the selected harnesses installed. `agents` takes the same options as the home module
@@ -200,18 +186,17 @@ runs `paseo-server` with the selected harnesses installed. `agents` takes the sa
 package providing `paseo-server`; the flake provides `packages.<system>.paseo`), `extraPackages`, `user`, `uid`, `gid`.
 The flake exposes a default image as `dockerImages.<linux system>.codebox`.
 
-Packages and skills are baked into the image. Everything that touches the home directory (skill links, memory
-links, MCP server merges, wrapper scripts) happens at container start during Home-Manager activation. The container
-entrypoint runs `${homeConfig.activationPackage}/activate` and launches `paseo-server`.
+Packages and skills are baked into the image. Everything touching the home directory happens at container startup
+during Home-Manager activation. The entrypoint executes `${homeConfig.activationPackage}/activate` and launches
+`paseo-server`.
 
-Mount additional files into `/etc/bikeshed/agents/init` to customise the container at startup. Every known harness
-appears in the base YAML with its defaults and `enable: false`, so a mounted file can enable it (the package must be
-in the image, otherwise init logs a warning), or define a new instance such as `claude-qwen` with `harness: claude`.
-MCP servers in the YAML use the harness' native schema.
+Mount additional files into `/etc/bikeshed/agents/init` to customize the container:
 
 ```yaml
 apiVersion: bikeshed.szakallas.net/v1alpha1
-kind: CodeboxInit
+kind: AgentConfig
+metadata:
+  name: local-override
 spec:
   skills:
     entries:
@@ -230,3 +215,32 @@ spec:
         sessionVariables:
           CLAUDE_CONFIG_DIR: $HOME/.claude-qwen
 ```
+
+---
+
+## Other Agents Library Exports
+
+- `agents.harnesses`: Attribute set of harness specifications, each defining `description`,
+  `mcpKey`, `wrapMcpServers`, `transformMcpServerSpec`, optionally `homeConfiguration`
+  (`defaultPackage` function taking `pkgs`, `defaultUserDirectory`, `defaultMemoryDirectory`,
+  `defaultMemoryFile`, `defaultLinkSkills`, `defaultWrapper`, etc.), and optionally `projectConfiguration`
+  (`defaultLinkSkills`, `defaultSkillsDirectory`, `defaultMcpTarget`).
+- `agents.mcpServerType`: Submodule option type for an individual generic MCP server
+  definition (`type`, `command`, `args`, `env`, `serverUrl`, `headers`).
+- `agents.mcpServersType`: Attribute set option type (`attrsOf mcpServerType`) for declaring generic MCP servers.
+- `agents.mcpServersForAgent`: Formats generic MCP server declarations for a specific agent harness.
+- `agents.popularHarnesses`: List of popular agent harness identifiers configured across bikeshed:
+  `[ "antigravity" "claude" "codex" "copilot" "gemini" "opencode" "pi" "vscode" ]`.
+- `agents.homeHarnesses`: Harnesses with a home configuration (those usable as `harnesses.<name>`).
+- `agents.allHarnesses`: List of all agent harness identifiers bikeshed can configure (currently identical to `popularHarnesses`).
+- `agents.memory`: Provides standard agent prompt fragments (`audiences`, `avoidTropes`, `codingWorkflow`, `machineUse`).
+- `agents.mkSkill pkgs { name, version, src, sourceRoot ? null, include ? null, ... }`: Creates a derivation
+  containing skills found in directories with a `SKILL.md` file.
+- `agents.assembleSkills`: Helper derivation to assemble skills from an attribute set or
+  list of skill paths into a single derivation containing all discovered skills.
+- `agents.assembleSkillsText`: The raw bash script text executed by `agents.assembleSkills`.
+- `agents.mkActivateAgentConfiguration`: Creates the `activate-agent-configuration` derivation for an `AgentConfig`.
+- `agents.mkCodeboxInit`: Alias to `mkActivateAgentConfiguration`.
+- `agents.mkBaseSpec`: Evaluates the Nix specification into the base `AgentConfig` attrset.
+- `agents.mkBaseYaml`: Produces the base `00-base.yaml` store derivation.
+- `agents.mkConfigMerge`: Utility script for applying path-based JSON/TOML merge operations.

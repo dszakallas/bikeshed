@@ -1,0 +1,239 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://bikeshed.szakallas.net/schemas/agent-config.v1alpha1.json",
+  "title": "AgentConfig",
+  "description": "Specification for Bikeshed AgentConfig documents (apiVersion: bikeshed.szakallas.net/v1alpha1)",
+  "type": "object",
+  "required": ["apiVersion", "kind", "spec"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "enum": ["bikeshed.szakallas.net/v1alpha1"],
+      "description": "Schema version."
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["AgentConfig", "CodeboxInit"],
+      "description": "Document kind."
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name identifier for this configuration document."
+        },
+        "namespace": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "wrappersDirectory": {
+          "type": "string",
+          "default": ".bikeshed/bin",
+          "description": "Directory relative to HOME where agent wrapper executables are linked."
+        },
+        "skills": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enable": {
+              "type": "boolean",
+              "default": false,
+              "description": "Whether to link agent skills."
+            },
+            "directory": {
+              "type": "string",
+              "default": ".agents/skills",
+              "description": "Directory relative to HOME where general skills are linked."
+            },
+            "entries": {
+              "type": "object",
+              "description": "Map of skill name to skill source.",
+              "additionalProperties": {
+                "type": "object",
+                "required": ["source"],
+                "properties": {
+                  "source": {
+                    "type": "string",
+                    "description": "Source path for the skill directory."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "harnesses": {
+          "type": "object",
+          "description": "Map of agent harness instances by instance name.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "enable": {
+                "type": "boolean",
+                "default": true,
+                "description": "Whether this harness instance is enabled."
+              },
+              "harness": {
+                "type": "string",
+                "description": "Known agent harness identifier (e.g. opencode, claude, codex, gemini, pi, copilot, antigravity)."
+              },
+              "binary": {
+                "type": "string",
+                "description": "Executable name or absolute store path to run."
+              },
+              "userDirectory": {
+                "type": "string",
+                "description": "Directory relative to HOME for harness user configuration."
+              },
+              "linkSkills": {
+                "type": "boolean",
+                "default": false,
+                "description": "Whether to link skills into this harness's skillsDirectory."
+              },
+              "skillsDirectory": {
+                "type": "string",
+                "description": "Directory relative to HOME where skills are linked for this harness."
+              },
+              "wrapper": {
+                "type": "object",
+                "additionalProperties": false,
+                "description": "Wrapper script configuration for this harness instance.",
+                "properties": {
+                  "enable": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Whether to create a wrapper script."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the wrapper executable in wrappersDirectory."
+                  },
+                  "executable": {
+                    "type": ["string", "null"],
+                    "description": "Path to the underlying executable when package is null."
+                  },
+                  "executableName": {
+                    "type": "string",
+                    "description": "Executable name."
+                  },
+                  "binary": {
+                    "type": "string",
+                    "description": "Target binary path or command name."
+                  },
+                  "sessionVariables": {
+                    "type": "object",
+                    "description": "Environment variables to export in the wrapper script.",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "environment": {
+                    "type": "object",
+                    "description": "Additional environment variables to export in the wrapper script.",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  },
+                  "initExtra": {
+                    "type": "string",
+                    "description": "Bash script snippet executed before the binary."
+                  },
+                  "args": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "Extra arguments to prepend to the binary invocation."
+                  }
+                }
+              },
+              "sessionVariables": {
+                "type": "object",
+                "description": "Environment variables for this harness instance.",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "memory": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "enable": {
+                    "type": "boolean",
+                    "default": false
+                  },
+                  "directory": {
+                    "type": "string",
+                    "description": "Directory relative to HOME for memory files."
+                  },
+                  "target": {
+                    "type": "string",
+                    "description": "Filename of the memory file."
+                  },
+                  "source": {
+                    "type": "string",
+                    "description": "Source path for the memory file."
+                  }
+                }
+              },
+              "mcp": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "strategy": {
+                    "type": "string",
+                    "enum": ["merge", "replace"],
+                    "default": "merge",
+                    "description": "How MCP servers combine with existing configuration."
+                  },
+                  "target": {
+                    "type": ["string", "null"],
+                    "description": "Config file relative to HOME into which MCP servers are merged."
+                  },
+                  "servers": {
+                    "type": "object",
+                    "description": "MCP server definitions in harness-native schema."
+                  }
+                }
+              },
+              "settings": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "target": {
+                    "type": ["string", "null"],
+                    "description": "Config file relative to HOME into which settings entries are applied."
+                  },
+                  "entries": {
+                    "type": "object",
+                    "description": "Settings entries keyed by dotted path.",
+                    "additionalProperties": {
+                      "type": "object",
+                      "required": ["value"],
+                      "properties": {
+                        "value": {},
+                        "strategy": {
+                          "type": "string",
+                          "enum": ["merge", "replace"],
+                          "default": "merge"
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

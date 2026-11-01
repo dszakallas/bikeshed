@@ -15,7 +15,7 @@ let
   plans = lib.mapAttrs (_: agentsLib.mkHarnessPlan pkgs) enabled;
 
   baseYaml = agentsLib.mkBaseYaml pkgs cfg;
-  codeboxInit = agentsLib.mkCodeboxInit pkgs {
+  agentConfigActivation = agentsLib.mkActivateAgentConfiguration pkgs {
     baseSpec = baseYaml;
     overridesDir = cfg.init.overridesDir;
   };
@@ -29,9 +29,9 @@ in
   // agentsLib.agentsOptions pkgs;
 
   config = mkIf cfg.enable {
-    home.packages =
-      lib.concatMap (plan: plan.packages) (lib.attrValues plans)
-      ++ [ codeboxInit ];
+    home.packages = lib.concatMap (plan: plan.packages) (lib.attrValues plans) ++ [
+      agentConfigActivation
+    ];
 
     home.sessionVariables = lib.foldl' (acc: plan: acc // plan.sessionVariables) { } (
       lib.attrValues plans
@@ -39,7 +39,7 @@ in
 
     home.activation.bikeshedAgentsInit = mkIf cfg.init.enable (
       lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        run ${codeboxInit}/bin/codebox-init
+        run ${agentConfigActivation}/bin/activate-agent-configuration
       ''
     );
   };

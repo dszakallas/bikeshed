@@ -200,6 +200,7 @@ in
     homeHarnesses = harnessConfig.configurableNames;
     inherit (harnessConfig)
       agentsOptions
+      mkActivateAgentConfiguration
       mkBaseSpec
       mkBaseYaml
       mkCodeboxInit

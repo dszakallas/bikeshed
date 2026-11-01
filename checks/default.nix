@@ -1,15 +1,17 @@
 { pkgs, lib }:
 let
-  init = lib.agents.mkCodeboxInit pkgs { };
+  activateAgentConfig = lib.agents.mkActivateAgentConfiguration pkgs { };
   configMerge = lib.agents.mkConfigMerge pkgs;
+  schema = ../lib/agents/agent-config.schema.json;
 in
 {
   codebox-init =
     pkgs.runCommand "codebox-init-test"
       {
         nativeBuildInputs = [
-          init
+          activateAgentConfig
           configMerge
+          pkgs.check-jsonschema
           pkgs.jq
           pkgs.yq-go
         ];
@@ -23,7 +25,9 @@ in
 
         cat > $CODEBOX_INIT_DIR/00-base.yaml <<YAML
         apiVersion: bikeshed.szakallas.net/v1alpha1
-        kind: CodeboxInit
+        kind: AgentConfig
+        metadata:
+          name: base
         spec:
           skills:
             enable: true
@@ -63,7 +67,9 @@ in
 
         cat > $CODEBOX_INIT_DIR/10-user.yaml <<YAML
         apiVersion: bikeshed.szakallas.net/v1alpha1
-        kind: CodeboxInit
+        kind: AgentConfig
+        metadata:
+          name: user-override
         spec:
           skills:
             entries:
@@ -92,12 +98,17 @@ in
                   CLAUDE_CONFIG_DIR: \$HOME/.claude-qwen
         YAML
 
+        # Validate documents against the JSON Schema
+        check-jsonschema --schemafile ${schema} $CODEBOX_INIT_DIR/00-base.yaml
+        check-jsonschema --schemafile ${schema} $CODEBOX_INIT_DIR/10-user.yaml
+
         # pre-existing config written by the harness, and a stale link
         mkdir -p $HOME/.config/opencode/skills
         echo '{"mcp":{"cli":{"type":"local"}},"theme":"dark"}' > $HOME/.config/opencode/opencode.json
         ln -s /nonexistent $HOME/.config/opencode/skills/stale
 
-        codebox-init
+        # Both command names should work identically
+        activate-agent-configuration
         codebox-init
 
         test -L $HOME/.agents/skills/skill-a
@@ -129,19 +140,34 @@ in
         mkdir -p $HOME $TMPDIR/overrides
         cat > $TMPDIR/overrides/extra.yaml <<YAML
         apiVersion: bikeshed.szakallas.net/v1alpha1
-        kind: CodeboxInit
+        kind: AgentConfig
+        metadata:
+          name: extra
         spec:
           harnesses:
             opencode:
               enable: true
         YAML
-        codebox-init "$CODEBOX_INIT_DIR/00-base.yaml" "$TMPDIR/overrides"
+        activate-agent-configuration "$CODEBOX_INIT_DIR/00-base.yaml" "$TMPDIR/overrides"
         test -x $HOME/.bikeshed/bin/opencode
         test -L $HOME/.agents/skills/skill-a
 
+        # Legacy CodeboxInit kind is also accepted for backwards compatibility
+        cat > $TMPDIR/overrides/legacy.yaml <<YAML
+        apiVersion: bikeshed.szakallas.net/v1alpha1
+        kind: CodeboxInit
+        metadata:
+          name: legacy
+        spec:
+          harnesses:
+            opencode:
+              enable: true
+        YAML
+        activate-agent-configuration "$CODEBOX_INIT_DIR/00-base.yaml" "$TMPDIR/overrides/legacy.yaml"
+
         # wrong apiVersion is rejected
         sed -i 's#v1alpha1#v0#' $CODEBOX_INIT_DIR/10-user.yaml
-        if codebox-init; then echo "expected failure" >&2; exit 1; fi
+        if activate-agent-configuration; then echo "expected failure" >&2; exit 1; fi
 
         touch $out
       '';
