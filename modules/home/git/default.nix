@@ -12,7 +12,7 @@ let
     mkOption
     types
     ;
-  moduleName = "bikeshed/home/base";
+  moduleName = "bikeshed/home/git";
 in
 {
   options =
@@ -227,7 +227,7 @@ in
       };
 
     home = {
-      packages = [ pkgs.git ];
+      packages = [ pkgs.git pkgs.delta ];
       file.".gitconfig" = {
         text = config.bikeshed.git.configLines;
       };

@@ -13,6 +13,7 @@
 	dh = diff HEAD
 	br = branch
 	f = fetch
+	fom = fetch origin main
 	fomm = fetch origin main:main
 	last = log -1 HEAD
 	lg = !"git lg1"
