@@ -13,8 +13,8 @@ let
   rawSrc = fetchFromGitHub {
     owner = "Egonex-AI";
     repo = "Understand-Anything";
-    rev = "f2d0164f72fe678805c34245a6df36acededfebd";
-    hash = "sha256-8QJy9PJKv9fSDzX9cPPmoqwM34s5JVT/FjcV50dfONE=";
+    rev = "182c7fbf1745d9acd55dda6c47cceff77de4c111";
+    hash = "sha256-EXx3/XUXJX6kthNoT5JvgF68hw508tUHcApIEHCLRWE=";
   };
 
   # Exclude packages/viewer from the pnpm workspace before dependency fetching:
@@ -54,12 +54,12 @@ let
     src = pluginSrc;
     pnpm = pnpm_10;
     fetcherVersion = 4;
-    hash = "sha256-yQS63+e67iv+dBEmFKXKw3fmAwumUg8fLQ28Rdd7WDg=";
+    hash = "sha256-VViExvmfqhH6nMJNIuquzNSB+//YLsWdy83W3yUSPxo=";
   };
 in
 mkSkill {
   name = "understand-anything";
-  version = "2026-10-12";
+  version = "2.9.8";
   src = pluginSrc;
   preserveSourceRoot = true;
   inherit pnpmDeps include exclude;
