@@ -70,9 +70,10 @@ in
   };
 
   config = mkIf cfg.enable {
-    home.packages =
-      [ cfg.package ]
-      ++ (optional cfg.desktop.enable pkgs.podman-desktop)
-      ++ (optional cfg.dockerCompat.enable dockerCompat);
+    home.packages = [
+      cfg.package
+    ]
+    ++ (optional cfg.desktop.enable pkgs.podman-desktop)
+    ++ (optional cfg.dockerCompat.enable dockerCompat);
   };
 }

@@ -227,7 +227,10 @@ in
       };
 
     home = {
-      packages = [ pkgs.git pkgs.delta ];
+      packages = [
+        pkgs.git
+        pkgs.delta
+      ];
       file.".gitconfig" = {
         text = config.bikeshed.git.configLines;
       };
