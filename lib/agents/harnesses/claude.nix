@@ -41,7 +41,8 @@ rec {
     mcpUtils.mkJsonMergeScript {
       inherit pkgs strategy;
       managed = mcpServers servers;
-      target = if target != null then target else "${userDirectory}/.claude.json";
+      target =
+        if target != null then target else "${userDirectory}/${homeConfiguration.defaultMcpTarget}";
     };
 
   homeConfiguration = {
@@ -49,6 +50,7 @@ rec {
     defaultUserDirectory = ".claude";
     defaultMemoryFile = "CLAUDE.md";
     defaultLinkSkills = true;
+    defaultMcpTarget = ".claude.json";
     defaultWrapper = {
       enable = true;
       executable = null;

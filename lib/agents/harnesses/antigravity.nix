@@ -29,7 +29,8 @@ rec {
     mcpUtils.mkJsonMergeScript {
       inherit pkgs strategy;
       managed = mcpServers servers;
-      target = if target != null then target else "${userDirectory}/mcp_config.json";
+      target =
+        if target != null then target else "${userDirectory}/${homeConfiguration.defaultMcpTarget}";
     };
 
   homeConfiguration = {
@@ -39,6 +40,7 @@ rec {
     defaultMemoryFile = "GEMINI.md";
     defaultLinkSkills = true;
     defaultSkillsDirectory = ".gemini/config/skills";
+    defaultMcpTarget = "mcp_config.json";
     defaultWrapper = {
       enable = false;
       executable = null;

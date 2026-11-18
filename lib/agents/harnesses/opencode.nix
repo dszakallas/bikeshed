@@ -46,7 +46,8 @@ rec {
     mcpUtils.mkJsonMergeScript {
       inherit pkgs strategy;
       managed = mcpServers servers;
-      target = if target != null then target else "${userDirectory}/opencode.json";
+      target =
+        if target != null then target else "${userDirectory}/${homeConfiguration.defaultMcpTarget}";
     };
 
   homeConfiguration = {
@@ -54,6 +55,7 @@ rec {
     defaultUserDirectory = ".config/opencode";
     defaultMemoryFile = "AGENTS.md";
     defaultLinkSkills = true;
+    defaultMcpTarget = "opencode.json";
     defaultWrapper = {
       enable = false;
       executable = null;

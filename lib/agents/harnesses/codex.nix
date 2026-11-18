@@ -48,7 +48,8 @@ rec {
     mcpUtils.mkTomlMergeScript {
       inherit pkgs strategy;
       managed = mcpServers servers;
-      target = if target != null then target else "${userDirectory}/config.toml";
+      target =
+        if target != null then target else "${userDirectory}/${homeConfiguration.defaultMcpTarget}";
       mcpKey = "mcp_servers";
     };
 
@@ -57,6 +58,7 @@ rec {
     defaultUserDirectory = ".codex";
     defaultMemoryFile = "AGENTS.md";
     defaultLinkSkills = true;
+    defaultMcpTarget = "config.toml";
     defaultWrapper = {
       enable = false;
       executable = null;

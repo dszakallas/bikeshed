@@ -158,7 +158,11 @@ let
             };
             target = mkOption {
               type = types.nullOr types.str;
-              default = rebase hc config.userDirectory (hc.defaultMcpTarget or null);
+              default =
+                if (hc.defaultMcpTarget or null) != null then
+                  "${config.userDirectory}/${hc.defaultMcpTarget}"
+                else
+                  null;
               defaultText = lib.literalMD "the harness' default MCP config file";
               description = "Config file, relative to home, that MCP servers are merged into.";
             };
@@ -174,7 +178,11 @@ let
           settings = {
             target = mkOption {
               type = types.nullOr types.str;
-              default = rebase hc config.userDirectory (hc.defaultMcpTarget or null);
+              default =
+                if (hc.defaultMcpTarget or null) != null then
+                  "${config.userDirectory}/${hc.defaultMcpTarget}"
+                else
+                  null;
               defaultText = lib.literalMD "the harness' default config file";
               description = "Config file (JSON or TOML), relative to home, that `settings.entries` are applied to.";
             };
@@ -302,7 +310,7 @@ let
         else if cfg.package != null then
           cfg.package.meta.mainProgram or cfg.harness
         else
-          hc.defaultBinary or cfg.harness;
+          hc.defaultWrapper.executableName or hc.defaultBinary or cfg.harness;
       binaryPath =
         if binaryName != null && lib.hasPrefix "/" binaryName then
           binaryName
@@ -310,12 +318,15 @@ let
           "${cfg.package}/bin/${binaryName}"
         else
           binaryName;
-      sessionVariables =
-        lib.mapAttrs (
-          _: lib.replaceStrings [ "$HOME/${hc.defaultUserDirectory}" ] [ "$HOME/${cfg.userDirectory}" ]
-        ) (hc.sessionVariables or { })
-        // cfg.env
-        // cfg.wrapper.sessionVariables;
+      defaultWrapperEnv =
+        if (hc.defaultWrapper.environment or null) != null then
+          hc.defaultWrapper.environment {
+            userDirectory = "$HOME/${cfg.userDirectory}";
+            memoryDirectory = "$HOME/${cfg.memory.directory}";
+          }
+        else
+          { };
+      sessionVariables = defaultWrapperEnv // cfg.env // cfg.wrapper.sessionVariables;
     in
     {
       packages = lib.optional (cfg.package != null) cfg.package;

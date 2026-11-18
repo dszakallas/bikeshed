@@ -57,13 +57,15 @@ rec {
     mcpUtils.mkJsonMergeScript {
       inherit pkgs strategy;
       managed = mcpServers servers;
-      target = if target != null then target else "${userDirectory}/mcp-config.json";
+      target =
+        if target != null then target else "${userDirectory}/${homeConfiguration.defaultMcpTarget}";
     };
 
   homeConfiguration = {
     defaultPackage = pkgs: pkgs.github-copilot-cli;
     defaultUserDirectory = ".copilot";
     defaultMemoryFile = "copilot-instructions.md";
+    defaultMcpTarget = "mcp-config.json";
     defaultWrapper = {
       enable = false;
       executable = null;
