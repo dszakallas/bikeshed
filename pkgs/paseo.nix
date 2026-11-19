@@ -13,19 +13,19 @@
   # different nixpkgs revision (`fetchNpmDeps` may hash the same lockfile
   # differently). Update together with `rev` and `hash` below; the upstream
   # value lives in nix/npm-deps.hash.
-  npmDepsHash ? "sha256-SKa/FSWDVxO5ZM06Z/5JT+Lx8GvbDOOjUKQKS6DL45Q=",
+  npmDepsHash ? "sha256-yLTaVMgu3tc/dgngJ7RP0htJcWE0ZtQ4mouypevyv0s=",
 }:
 
 buildNpmPackage rec {
   pname = "paseo";
-  version = "0.15.3";
+  version = "0.16.2";
 
   src = lib.cleanSourceWith {
     src = fetchFromGitHub {
       owner = "getpaseo";
       repo = "paseo";
-      rev = "d91ae138cb931447635e94296023414a58bedcc5";
-      hash = "sha256-ZpJ1devem8cREv4MzPf3JG84xUAEHAmgUhAP4HfQ+us=";
+      rev = "2ee30f4164af42ba209236ab3a31bf9532592fc3";
+      hash = "sha256-QUiFW45kS0CSMOTIUg5odZhbcub/aHDhxs5geRb2+0c=";
     };
     filter =
       path: type:
