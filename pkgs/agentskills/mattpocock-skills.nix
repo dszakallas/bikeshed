@@ -4,7 +4,6 @@
   include ? [
     "code-review"
     "codebase-design"
-    "resolving-merge-conflicts"
     "domain-modeling"
     "tdd"
     "prototype"
@@ -14,12 +13,12 @@
 }:
 mkSkill {
   name = "mattpocock-skills";
-  version = "2026-09-29";
+  version = "2026-11-19";
   src = fetchFromGitHub {
     owner = "mattpocock";
     repo = "skills";
-    rev = "d81f3a183412e71a5b1e84ca21bc1a35eea03a60";
-    hash = "sha256-zQ/wVrcHjIC+UjP4nDw3HARMqZd6LIDFmHKlp8AADYI=";
+    rev = "abeeaf95660ba9e8b7c753eb38f441ca707a8823";
+    hash = "sha256-fc5+qmchp1IQ/rQP1olWKC1eC4VdYhaB7YYzC3+JBe0=";
   };
   inherit include exclude;
 }

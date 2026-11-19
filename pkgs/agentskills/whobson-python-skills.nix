@@ -6,12 +6,12 @@
 }:
 mkSkill {
   name = "wshobson-python-skills";
-  version = "2026-09-29";
+  version = "2026-11-18";
   src = fetchFromGitHub {
     owner = "wshobson";
     repo = "agents";
-    rev = "156b7a5e7a8b93642628a339ee4039c925b34c7f";
-    hash = "sha256-LNDpYF5bOeG9GmDW3A2sZv88B00WmxxOAPkzCgkfj3Y=";
+    rev = "42203085cfc5736204bf0f6d436dff7e1da0bf3f";
+    hash = "sha256-Azub9g+GEohos2XocajDJPAiQbdbfQFrn76AiDEGXmk=";
   };
   sourceRoot = "plugins/python-development";
   inherit include exclude;

@@ -22,12 +22,12 @@
 }:
 mkSkill {
   name = "cc-skills-golang";
-  version = "2026-09-07";
+  version = "2026-11-08";
   src = fetchFromGitHub {
     owner = "samber";
     repo = "cc-skills-golang";
-    rev = "19a0626ae8565d27a7b7bdf59d8d99d94d7e284c";
-    hash = "sha256-owdNtWmTwxzzrmS0XwU/8GKbJmDKl0uqi9VpiBhemps=";
+    rev = "d68d80aec298e1b74b37c2a472c002b5217248b3";
+    hash = "sha256-Kc3OXcnaFjo+4rcH7AiBg0tJcVqXAnQvJv+pfuHETMw=";
   };
   inherit include exclude;
 }
