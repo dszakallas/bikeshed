@@ -41,6 +41,7 @@ rec {
     defaultLinkSkills = true;
     defaultSkillsDirectory = ".gemini/config/skills";
     defaultMcpTarget = "mcp_config.json";
+    defaultSettingsTarget = "settings.json";
     defaultWrapper = {
       enable = false;
       executable = null;

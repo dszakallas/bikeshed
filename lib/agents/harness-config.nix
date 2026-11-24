@@ -179,8 +179,8 @@ let
             target = mkOption {
               type = types.nullOr types.str;
               default =
-                if (hc.defaultMcpTarget or null) != null then
-                  "${config.userDirectory}/${hc.defaultMcpTarget}"
+                if (hc.defaultSettingsTarget or null) != null then
+                  "${config.userDirectory}/${hc.defaultSettingsTarget}"
                 else
                   null;
               defaultText = lib.literalMD "the harness' default config file";

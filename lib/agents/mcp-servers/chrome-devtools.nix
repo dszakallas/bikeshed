@@ -1,5 +1,6 @@
-{ nodejs, writeShellScript }:
+pkgs:
 let
+  inherit (pkgs) nodejs writeShellScript;
   # npx re-execs the package's bin script via its own `#!/usr/bin/env node`
   # shebang, so `node` must be resolvable on PATH even though npx itself is
   # invoked by absolute path. MCP hosts commonly spawn servers with a PATH

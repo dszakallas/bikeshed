@@ -52,6 +52,7 @@ rec {
     defaultUserDirectory = ".gemini";
     defaultMemoryFile = "GEMINI.md";
     defaultMcpTarget = "settings.json";
+    defaultSettingsTarget = "settings.json";
     defaultWrapper = {
       enable = false;
       executable = null;

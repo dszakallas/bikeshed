@@ -51,6 +51,7 @@ rec {
     defaultMemoryFile = "CLAUDE.md";
     defaultLinkSkills = true;
     defaultMcpTarget = ".claude.json";
+    defaultSettingsTarget = "settings.json";
     defaultWrapper = {
       enable = true;
       executable = null;

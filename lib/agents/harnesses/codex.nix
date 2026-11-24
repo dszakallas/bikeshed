@@ -59,6 +59,7 @@ rec {
     defaultMemoryFile = "AGENTS.md";
     defaultLinkSkills = true;
     defaultMcpTarget = "config.toml";
+    defaultSettingsTarget = "config.toml";
     defaultWrapper = {
       enable = false;
       executable = null;
@@ -75,6 +76,5 @@ rec {
     defaultLinkSkills = false;
     defaultSkillsDirectory = ".codex/skills";
     defaultMcpTarget = ".codex/config.toml";
-    format = "toml";
   };
 }

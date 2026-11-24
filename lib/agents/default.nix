@@ -18,13 +18,6 @@ let
     else
       throw "Agent harness '${agent}' does not define 'mcpServers'.";
 
-  memory = {
-    avoidTropes = builtins.readFile ./memory/avoid-tropes.md;
-    codingWorkflow = builtins.readFile ./memory/coding-workflow.md;
-    audiences = builtins.readFile ./memory/audiences.md;
-    machineUse = builtins.readFile ./memory/machine-use.md;
-  };
-
   mkSkill =
     { stdenvNoCC, yq-go, ... }:
     {
@@ -199,6 +192,7 @@ let
 in
 {
   agents = {
+    mcpServers.chrome-devtools = import ./mcp-servers/chrome-devtools.nix;
     homeHarnesses = harnessConfig.configurableNames;
     inherit (harnessConfig)
       agentsOptions
@@ -216,7 +210,6 @@ in
       mcpServerType
       mcpServersType
       mcpServersForAgent
-      memory
       mkCodeboxImage
       mkPaseoSandboxImage
       mkSkill

@@ -56,6 +56,7 @@ rec {
     defaultMemoryFile = "AGENTS.md";
     defaultLinkSkills = true;
     defaultMcpTarget = "opencode.json";
+    defaultSettingsTarget = "opencode.json";
     defaultWrapper = {
       enable = false;
       executable = null;

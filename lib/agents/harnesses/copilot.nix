@@ -66,6 +66,7 @@ rec {
     defaultUserDirectory = ".copilot";
     defaultMemoryFile = "copilot-instructions.md";
     defaultMcpTarget = "mcp-config.json";
+    defaultSettingsTarget = "config.json";
     defaultWrapper = {
       enable = false;
       executable = null;

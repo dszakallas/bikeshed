@@ -48,6 +48,7 @@ rec {
     defaultMemoryFile = "AGENTS.md";
     defaultLinkSkills = true;
     defaultMcpTarget = "mcp.json";
+    defaultSettingsTarget = "settings.json";
     defaultWrapper = {
       enable = false;
       executable = null;
