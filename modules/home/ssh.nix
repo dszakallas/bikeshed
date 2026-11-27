@@ -108,6 +108,7 @@ in
             Compression = false;
             ServerAliveInterval = 0;
             ServerAliveCountMax = 3;
+            ConnectTimeout = 30;
             HashKnownHosts = false;
             # default ~/.ssh/known_hosts is unmanaged. ~/.bikeshed/share/ssh/known_hosts is managed by this module
             UserKnownHostsFile = "~/.ssh/known_hosts ~/.bikeshed/share/ssh/known_hosts";
